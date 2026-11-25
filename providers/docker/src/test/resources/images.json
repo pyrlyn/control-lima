@@ -1,0 +1,5 @@
+[
+  {"Id":"sha256:aaa","RepoTags":["getsentry/sentry:24.1.0"],"Size":1234567890,"Created":1730000000,"Containers":1},
+  {"Id":"sha256:bbb","RepoTags":["<none>:<none>"],"Size":1000,"Created":1720000000,"Containers":-1},
+  {"Id":"sha256:ccc","RepoTags":null,"Size":5}
+]

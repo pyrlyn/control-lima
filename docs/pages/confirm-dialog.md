@@ -1,0 +1,21 @@
+# Confirm destructive action dialog
+
+Figma: TBD
+
+## Purpose
+Shared dialog for delete, restore, prune and VM rename.
+
+## Data shown
+What will happen (target, source, size to be freed, data lost), a text field "Type <name> to confirm", protected-name notice.
+
+## Actions
+Confirm (enabled only when the typed text equals the name exactly), cancel (Esc).
+
+## States
+- **Empty:** n/a.
+- **Loading:** confirm button spinner while the request runs.
+- **Error:** server error shown inline (e.g. 409 protected, 422 name mismatch).
+- **Unresponsive:** for an unresponsive VM, warns that delete may need force stop first.
+
+## API
+Whatever the calling action uses; the body always carries `confirmName`.

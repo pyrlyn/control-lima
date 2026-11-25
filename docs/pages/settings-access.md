@@ -1,0 +1,21 @@
+# Settings & Access
+
+Figma: TBD
+
+## Purpose
+Configure ControlLima and manage who can do what.
+
+## Data shown
+Sections: General (Lima homes, Colima profiles, binaries and versions, passthrough args, polling, units, theme), Protected names, Metrics retention and DB size, Disk cleanup, Notifications (link to Alerts), Access (tokens, users, roles), Audit log, About (version, update check toggle, data dir).
+
+## Actions
+Edit settings (admin), add/remove protected names (admin, audited), create/revoke tokens (admin; token shown once), manage users (admin), filter/export audit log (admin), forget metrics history.
+
+## States
+- **Empty:** n/a.
+- **Loading:** skeleton.
+- **Error:** validation errors inline; save failure banner.
+- **Unresponsive:** n/a.
+
+## API
+`GET/PUT /api/settings`, `GET/POST/DELETE /api/tokens`, `GET/POST/DELETE /api/users`, `GET /api/audit`, `GET /api/disk`, `GET /api/session`.
