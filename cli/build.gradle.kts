@@ -23,3 +23,15 @@ dependencies {
 }
 
 tasks.test { useJUnitPlatform() }
+
+// The web app goes into the jar under `web/`, where the server's StaticFiles looks for it.
+val webDist = configurations.create("webDist") {
+    isCanBeConsumed = false
+    isCanBeResolved = true
+}
+dependencies { webDist(project(path = ":web", configuration = "webDistElements")) }
+val packageWeb = tasks.register<Sync>("packageWeb") {
+    from(webDist)
+    into(layout.buildDirectory.dir("generated/webResources/web"))
+}
+sourceSets.main { resources.srcDir(files(layout.buildDirectory.dir("generated/webResources")).builtBy(packageWeb)) }
