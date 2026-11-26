@@ -30,6 +30,9 @@ control-lima backup [vm…] [--redact]
 control-lima restore <backup-id> --target vm:lima/dev --confirm dev [--new-name dev2]
 ```
 
+`./gradlew :desktop:run` starts the desktop app (window plus menu bar item; closing the window keeps it in
+the menu bar).
+
 `./gradlew :cli:installDist` builds `cli/build/install/control-lima/bin/control-lima` with the web app inside.
 
 ## Modules
@@ -43,7 +46,8 @@ control-lima restore <backup-id> --target vm:lima/dev --confirm dev [--new-name 
 | `providers/colima` | `ColimaProvider` over `colima ... --json` |
 | `providers/docker` | `DockerProvider` over the Docker Engine API on the Colima unix socket |
 | `providers/host` | Host facts: free disk, listening ports, opening the browser |
-| `web` | Compose Multiplatform for Web (wasmJs) UI, one page per file in `docs/pages/` |
+| `web` | Compose Multiplatform UI, one page per file in `docs/pages/`; `commonMain` pages, wasmJs (browser) and jvm (desktop) glue |
+| `desktop` | Desktop app: the same UI in a window plus a menu bar item, server in-process |
 | `cli` | `control-lima` entry point: `serve`, `status`, `token`, `backup`, `restore`, `top`; bundles the web app |
 
 ## Build and test

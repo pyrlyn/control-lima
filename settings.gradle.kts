@@ -26,4 +26,5 @@ include(
     ":providers:host",
     ":web",
     ":cli",
+    ":desktop",
 )
