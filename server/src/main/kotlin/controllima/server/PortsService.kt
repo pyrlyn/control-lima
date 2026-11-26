@@ -3,6 +3,8 @@ package controllima.server
 import controllima.shared.Container
 import controllima.shared.HostListener
 import controllima.shared.IpEntry
+import controllima.shared.KubeCluster
+import controllima.shared.KubeService
 import controllima.shared.NetworkInfo
 import controllima.shared.PortEntry
 import controllima.shared.PortOwnerKind
@@ -21,6 +23,7 @@ class PortsService(
     private val inventory: Inventory,
     private val containers: ContainerInventory,
     private val clock: () -> Long = System::currentTimeMillis,
+    private val kube: KubernetesService? = null,
 ) {
     @Volatile private var listenersCache: Triple<Long, List<HostListener>, String?>? = null
     private val guestIps = ConcurrentHashMap<String, Pair<Long, List<String>>>()
@@ -53,7 +56,8 @@ class PortsService(
         val allContainers = lists.flatMap { it.containers }
         val (listeners, lsofWarning) = listeners()
         val warnings = listOfNotNull(lsofWarning) + lists.filter { it.unavailable }.map { "Containers of profile ${it.profile}: ${it.error}" }
-        val ports = build(vms, allContainers, listeners)
+        val services = runCatching { kube?.nodePortServices() }.getOrNull().orEmpty()
+        val ports = build(vms, allContainers, listeners) + nodePorts(services)
         val ips = vms.map { vm ->
             IpEntry(vm.name, vm.ref.targetId, (vm.ipAddresses + guestIps(vm)).distinct())
         } + allContainers.filter { it.ipAddresses.isNotEmpty() }.map { IpEntry(it.name, it.targetId, it.ipAddresses) }
@@ -107,6 +111,18 @@ class PortsService(
             }
             return out
         }
+
+        /**
+         * Lima's guest agent forwards Kubernetes node ports to localhost, so each one is listed as a host port.
+         * They carry no conflict check: the VM's own forward of the same port is the expected path, not a clash.
+         */
+        fun nodePorts(services: List<Pair<KubeCluster, KubeService>>): List<PortEntry> = services.flatMap { (cluster, svc) ->
+            svc.ports.mapNotNull { p ->
+                val nodePort = p.nodePort ?: return@mapNotNull null
+                PortEntry("127.0.0.1", nodePort, p.protocol.lowercase(), p.port, PortOwnerKind.SERVICE,
+                    "${svc.namespace}/${svc.name} (${cluster.label})", "kube:${cluster.id}", svc.type)
+            }
+        }.sortedBy { it.hostPort }
 
         private fun overlaps(a: String, b: String): Boolean {
             val any = setOf("*", "0.0.0.0", "::", "")

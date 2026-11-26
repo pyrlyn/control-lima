@@ -3,6 +3,7 @@ package controllima.server
 import controllima.server.http.forbidden
 import controllima.server.http.notFound
 import controllima.server.security.Redactor
+import controllima.shared.KubeRoutes
 import controllima.shared.LogLine
 import controllima.shared.LogSource
 import controllima.shared.Role
@@ -36,6 +37,7 @@ class LogService(
     private val backends: Backends,
     private val inventory: Inventory,
     private val containers: ContainerInventory,
+    private val kube: KubernetesService? = null,
     private val settings: () -> Settings,
 ) {
     private fun redactor() = Redactor(settings().redactionPatterns)
@@ -47,6 +49,12 @@ class LogService(
         if (target == null || target.startsWith("container:")) {
             val list = if (target != null) containers.cached().filter { it.targetId == target } else containers.cached()
             list.forEach { c -> out += LogSource("${c.targetId}#docker", c.targetId, "docker", "${c.name}: stdout/stderr") }
+        }
+        // Pods are listed only on request (from the Kubernetes page): a cluster can have hundreds.
+        KubeRoutes.parsePodTarget(target.orEmpty())?.let { (cluster, ns, pod) ->
+            val names = kube?.cachedContainers(cluster, ns, pod).orEmpty()
+            if (names.isEmpty()) out += LogSource("$target#pod", target!!, "pod", "$ns/$pod")
+            names.forEach { c -> out += LogSource("$target#pod:$c", target!!, "pod", "$ns/$pod: $c") }
         }
         if (target == null || target == SELF) {
             out += LogSource("$SELF#server", SELF, "server", "ControlLima server log", paths.serverLog.isFile, if (paths.serverLog.isFile) null else "No log written yet")
@@ -110,6 +118,7 @@ class LogService(
         val r = redactor()
         val lines = when (p.kind) {
             "docker" -> dockerLines(p.target, n)
+            "pod" -> podLines(p, n)
             "journal", "cloud-init" -> {
                 val vm = vmOf(p.target)
                 val ssh = vm.sshConfigFile ?: throw IllegalStateException("VM has no SSH config")
@@ -136,6 +145,12 @@ class LogService(
         val out = Channel<LogLine>(capacity = 10_000)
         val handle: Closeable = when (p.kind) {
             "docker" -> openDocker(p.target, n, onEnd = { out.close() }) { out.trySend(it) }
+            // The API's follow mode needs a long-lived request the KubeClient does not offer yet: send the tail and end.
+            "pod" -> {
+                withContext(Dispatchers.IO) { podLines(p, n.coerceAtLeast(1)) }.forEach { out.trySend(it) }
+                out.close()
+                Closeable { }
+            }
             "journal", "cloud-init" -> {
                 val vm = vmOf(p.target)
                 val ssh = vm.sshConfigFile ?: throw IllegalStateException("VM has no SSH config")
@@ -157,6 +172,12 @@ class LogService(
         } finally {
             handle.close()
         }
+    }
+
+    private suspend fun podLines(p: Parsed, n: Int): List<LogLine> {
+        val (cluster, ns, pod) = KubeRoutes.parsePodTarget(p.target) ?: notFound("Unknown pod")
+        val k = kube ?: notFound("Kubernetes is not available")
+        return k.podLogs(cluster, ns, pod, p.file, n.coerceIn(1, 10_000))
     }
 
     private fun limaInstance(vm: Vm) = if (vm.source == VmSource.COLIMA) backends.colima().limaInstance(vm.name) else vm.name

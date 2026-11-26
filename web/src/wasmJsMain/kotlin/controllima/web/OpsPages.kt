@@ -72,7 +72,7 @@ fun PortsPage(m: AppModel) {
                     TextCell(0.8f, p.proto)
                     TextCell(1f, p.targetPort?.toString())
                     Cell(2.4f) {
-                        val kind = when (p.ownerKind) { PortOwnerKind.VM -> "VM"; PortOwnerKind.CONTAINER -> "Container"; PortOwnerKind.PROCESS -> "Process" }
+                        val kind = when (p.ownerKind) { PortOwnerKind.VM -> "VM"; PortOwnerKind.CONTAINER -> "Container"; PortOwnerKind.PROCESS -> "Process"; PortOwnerKind.SERVICE -> "k8s service" }
                         val jump = p.ownerTarget?.let { t -> ownerScreen(t) }
                         if (jump != null) TextButton(onClick = { m.navigate(jump) }) { Text("$kind ${p.owner}") } else Text("$kind ${p.owner}")
                     }

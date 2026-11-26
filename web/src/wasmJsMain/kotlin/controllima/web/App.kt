@@ -54,6 +54,7 @@ enum class Page(val title: String, val doc: String, val key: Key) {
     Vms("VMs", "vms", Key.V),
     Containers("Containers", "containers", Key.C),
     Images("Images", "images", Key.I),
+    Kubernetes("Kubernetes", "kubernetes", Key.K),
     Ports("Ports & Network", "ports-network", Key.P),
     Metrics("Metrics", "metrics", Key.M),
     Alerts("Alerts", "alerts", Key.A),
@@ -182,6 +183,7 @@ private fun Shell(m: AppModel) {
                         Page.Vms -> VmsPage(m)
                         Page.Containers -> ContainersPage(m)
                         Page.Images -> ImagesPage(m)
+                        Page.Kubernetes -> KubernetesPage(m)
                         Page.Ports -> PortsPage(m)
                         Page.Metrics -> MetricsPage(m)
                         Page.Alerts -> AlertsPage(m)

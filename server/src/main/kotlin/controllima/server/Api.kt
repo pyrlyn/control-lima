@@ -1,5 +1,7 @@
 package controllima.server
 
+import controllima.providers.kube.KubeApiException
+import controllima.providers.kube.KubeException
 import controllima.providers.colima.ColimaException
 import controllima.providers.docker.DockerException
 import controllima.providers.docker.DockerProvider
@@ -100,6 +102,7 @@ class Services(
     val disk: DiskService,
     val about: AboutService,
     val vmEdit: VmEditService,
+    val kube: KubernetesService,
 )
 
 /**
@@ -187,7 +190,8 @@ class Api(internal val s: Services, private val static: StaticFiles = StaticFile
         is SerializationException -> Response.error(400, "bad_request", "Malformed request body")
         is IllegalArgumentException -> Response.error(400, "bad_request", e.message ?: "Bad request")
         is TimeoutCancellationException -> Response.error(504, "timeout", "The backend did not answer in time")
-        is ProviderException, is ColimaException, is DockerException, is IllegalStateException, is UnsupportedOperationException ->
+        is ProviderException, is ColimaException, is DockerException, is KubeException, is KubeApiException,
+        is IllegalStateException, is UnsupportedOperationException ->
             if (e.message?.contains("timed out", ignoreCase = true) == true) Response.error(504, "timeout", e.message!!)
             else Response.error(502, "backend_error", e.message ?: "Backend error")
         else -> Response.error(500, "internal", "Internal error")
@@ -290,6 +294,7 @@ class Api(internal val s: Services, private val static: StaticFiles = StaticFile
         settingsRoutes()
         accessRoutes()
         vmEditRoutes()
+        kubeRoutes()
     }
 
     private fun vmRoutes() {

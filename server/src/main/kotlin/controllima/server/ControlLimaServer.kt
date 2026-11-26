@@ -67,7 +67,8 @@ class ControlLimaServer(
         val inventory = Inventory(backends, { settings.current }, events)
         val containers = ContainerInventory(backends, events, nerdctl = NerdctlProfiles(backends, { inventory.snapshot.value.vms }))
         val stats = StatsCollector(backends, inventory, containers, { settings.current })
-        val ports = PortsService(backends, inventory, containers)
+        val kube = KubernetesService(File(homeDir).toPath(), { inventory.snapshot.value.vms })
+        val ports = PortsService(backends, inventory, containers, kube = kube)
         val retention = { settings.current.let { Retention(it.retentionRawHours, it.retention1mDays, it.retention15mDays, it.retention1hDays) } }
         // The file store keeps history working when the SQLite native library cannot load on this machine.
         val metrics: MetricsStore = runCatching { SqliteMetricsStore(paths.metricsDb, retention) }.getOrElse { e ->
@@ -77,14 +78,14 @@ class ControlLimaServer(
         val channels = ChannelStore(File(paths.alerts, "channels.json"), secrets)
         val notifier = ChannelNotifier(host, http, secrets)
         val alerts = AlertEngine(paths.alerts, channels, notifier, events)
-        val logs = LogService(paths, backends, inventory, containers) { settings.current }
+        val logs = LogService(paths, backends, inventory, containers, kube) { settings.current }
         val backups = BackupService(paths, backends, inventory, actions, { settings.current })
         val templates = TemplateService(paths, backends, inventory, actions, { settings.current })
         val disk = DiskService(backends, inventory, stats, metrics, backups)
         val about = AboutService(config, paths, backends, { settings.current }, http)
         services = Services(
             config, paths, settings, backends, access, audit, events, actions, inventory, containers, stats, ports,
-            metrics, alerts, channels, notifier, logs, backups, templates, disk, about, VmEditService(paths, backends, backups),
+            metrics, alerts, channels, notifier, logs, backups, templates, disk, about, VmEditService(paths, backends, backups), kube,
         )
         server = KtorHttpServer(config.host, config.port, Api(services))
     }
@@ -167,6 +168,7 @@ class ControlLimaServer(
         services.stats.stop()
         scope.cancel()
         services.metrics.close()
+        services.kube.close()
         http.close()
     }
 }

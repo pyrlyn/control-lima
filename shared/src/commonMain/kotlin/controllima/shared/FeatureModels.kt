@@ -40,7 +40,7 @@ enum class EventType { VM_STATE, CONTAINER_STATE, ACTION_PROGRESS, ACTION_DONE, 
 // ---------- Ports and network ----------
 
 @Serializable
-enum class PortOwnerKind { VM, CONTAINER, PROCESS }
+enum class PortOwnerKind { VM, CONTAINER, PROCESS, SERVICE }
 
 @Serializable
 data class PortEntry(

@@ -9,6 +9,12 @@ import controllima.server.metrics.MetricsStore
 import controllima.server.metrics.SqliteMetricsStore
 import controllima.server.metrics.TieredMetricsStore
 import controllima.providers.host.SecretStore
+import controllima.providers.kube.KubeClient
+import controllima.shared.KubeNode
+import controllima.shared.KubePod
+import controllima.shared.KubeService
+import controllima.shared.KubeServicePort
+import controllima.shared.LogLine
 import controllima.shared.AlertState
 import controllima.shared.HostListener
 import controllima.shared.Metric
@@ -22,11 +28,75 @@ import kotlinx.coroutines.runBlocking
 import java.nio.file.Files
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class ServicesTest {
+
+    @Test
+    fun `kubernetes clusters come from lima kubeconfigs and stopped vms are never contacted`() = runBlocking {
+        val home = Files.createTempDirectory("cl-kube")
+        val dir = home.resolve("lima/dev")
+        Files.createDirectories(dir.resolve("copied-from-guest"))
+        val ca = java.util.Base64.getEncoder().encodeToString("ca".toByteArray())
+        Files.writeString(
+            dir.resolve("copied-from-guest/kubeconfig.yaml"),
+            """
+            apiVersion: v1
+            clusters:
+            - cluster:
+                certificate-authority-data: $ca
+                server: https://127.0.0.1:6443
+              name: default
+            contexts:
+            - context:
+                cluster: default
+                user: default
+              name: default
+            current-context: default
+            users:
+            - name: default
+              user:
+                token: secret
+            """.trimIndent(),
+        )
+        val calls = mutableListOf<String>()
+        val fake = object : KubeClient {
+            override fun nodes() = listOf(KubeNode("dev", true))
+            override fun namespaces() = listOf("default")
+            override fun pods(namespace: String?) = listOf(KubePod("default", "web-1", "Running", "1/1", containers = listOf("web")))
+            override fun services(namespace: String?) =
+                listOf(KubeService("default", "web", "NodePort", ports = listOf(KubeServicePort(port = 80, nodePort = 30080))))
+            override fun metricsAvailable() = false
+            override fun deletePod(namespace: String, name: String) { calls += "delete $namespace/$name" }
+            override fun podLogs(namespace: String, name: String, container: String?, tailLines: Int) = listOf(LogLine(null, "stdout", "hi"))
+            override fun close() {}
+        }
+        var status = VmStatus.STOPPED
+        val kube = KubernetesService(home, { listOf(Vm("dev", VmSource.LIMA, status, dir = dir.toString())) }, { access ->
+            calls += "connect ${access.server}"
+            fake
+        })
+        val stopped = kube.clusters().single()
+        assertEquals("lima/dev", stopped.id)
+        assertFalse(stopped.available)
+        assertNotNull(kube.overview("lima/dev").error)
+        assertTrue(calls.isEmpty(), "a stopped VM's cluster is never contacted")
+
+        status = VmStatus.RUNNING
+        val overview = kube.overview("lima/dev", maxAgeMillis = 0)
+        assertNull(overview.error)
+        assertEquals(listOf("web-1"), overview.pods.map { it.name })
+        assertEquals(listOf("web"), kube.cachedContainers("lima/dev", "default", "web-1"))
+        val ports = PortsService.nodePorts(kube.nodePortServices())
+        assertEquals(30080, ports.single().hostPort)
+        assertEquals("kube:lima/dev", ports.single().ownerTarget)
+        kube.deletePod("lima/dev", "default", "web-1")
+        assertEquals(listOf("connect https://127.0.0.1:6443", "delete default/web-1"), calls)
+        home.toFile().deleteRecursively()
+    }
     private val dir = Files.createTempDirectory("cl-svc").toFile()
 
     @Test

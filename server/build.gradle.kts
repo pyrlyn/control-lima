@@ -14,6 +14,7 @@ dependencies {
     api(project(":providers:lima"))
     api(project(":providers:colima"))
     api(project(":providers:docker"))
+    api(project(":providers:kube"))
     api(project(":providers:host"))
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.serialization.json)

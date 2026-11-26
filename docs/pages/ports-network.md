@@ -22,3 +22,4 @@ Open in browser, copy, jump to owner, filter by owner/port.
 
 ## Implementation
 `PortsPage` in `web/.../OpsPages.kt`. Also reads `GET /api/networks`. Conflicts are highlighted rows with a warning mark; owners link to their detail page.
+v2: Kubernetes node-port services are listed as "k8s service" rows on 127.0.0.1 (Lima forwards them); they get no conflict check, since the VM's own forward of the same port is expected.

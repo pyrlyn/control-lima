@@ -14,6 +14,7 @@ endpoints, and a `Figma:` line. Until the Figma file exists the line says `Figma
 | Containers | [containers.md](containers.md) | MVP |
 | Container detail | [container-detail.md](container-detail.md) | MVP |
 | Images | [images.md](images.md) | MVP |
+| Kubernetes | [kubernetes.md](kubernetes.md) | v2 |
 | Ports & Network | [ports-network.md](ports-network.md) | MVP |
 | Metrics | [metrics.md](metrics.md) | v1 |
 | Alerts | [alerts.md](alerts.md) | v1 |

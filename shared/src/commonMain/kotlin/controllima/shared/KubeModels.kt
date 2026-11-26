@@ -78,3 +78,23 @@ data class KubeOverview(
     val metricsAvailable: Boolean = false,
     val error: String? = null,
 )
+
+object KubeRoutes {
+    const val CLUSTERS = "/api/kube/clusters"
+
+    /** Cluster ids are `<source>/<vm>`, which maps onto two path segments. */
+    fun cluster(id: String) = "$CLUSTERS/${id.split('/').joinToString("/") { ApiRoutes.encode(it) }}"
+    fun pod(clusterId: String, namespace: String, pod: String) =
+        "${cluster(clusterId)}/pods/${ApiRoutes.encode(namespace)}/${ApiRoutes.encode(pod)}"
+
+    /** Log target of a pod: `kube:<source>/<vm>/<namespace>/<pod>`; the log source adds `#pod[:<container>]`. */
+    fun podTarget(clusterId: String, namespace: String, pod: String) = "kube:$clusterId/$namespace/$pod"
+
+    /** (clusterId, namespace, pod) of a [podTarget], or null. */
+    fun parsePodTarget(target: String): Triple<String, String, String>? {
+        if (!target.startsWith("kube:")) return null
+        val parts = target.removePrefix("kube:").split('/')
+        if (parts.size != 4 || parts.any { it.isEmpty() }) return null
+        return Triple("${parts[0]}/${parts[1]}", parts[2], parts[3])
+    }
+}

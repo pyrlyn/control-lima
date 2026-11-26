@@ -48,7 +48,9 @@ private const val TAIL = 500
  */
 @Composable
 fun LogsPage(m: AppModel, initial: String?, embedded: Boolean = false) {
-    val sources = load(Unit) { m.api.logSources() }
+    // Pod sources exist only when asked for by target: a cluster can have hundreds of pods.
+    val kubeTarget = initial?.substringBefore('#')?.takeIf { it.startsWith("kube:") }
+    val sources = load(kubeTarget) { m.api.logSources() + (kubeTarget?.let { m.api.logSources(it) }.orEmpty()) }
     var target by remember(initial) { mutableStateOf(initial?.substringBefore('#')) }
     var sourceId by remember(initial) { mutableStateOf(initial?.takeIf { '#' in it }) }
     var follow by remember { mutableStateOf(true) }
