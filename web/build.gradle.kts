@@ -25,3 +25,21 @@ kotlin {
         }
     }
 }
+
+kotlin.sourceSets.all {
+    languageSettings.optIn("androidx.compose.material3.ExperimentalMaterial3Api")
+    languageSettings.optIn("androidx.compose.foundation.layout.ExperimentalLayoutApi")
+    languageSettings.optIn("kotlin.js.ExperimentalWasmJsInterop")
+}
+
+// The CLI serves the built app from its classpath; it consumes this directory instead of reaching into
+// another project's tasks.
+val webDistElements = configurations.create("webDistElements") {
+    isCanBeConsumed = true
+    isCanBeResolved = false
+}
+artifacts {
+    add(webDistElements.name, layout.buildDirectory.dir("dist/wasmJs/productionExecutable")) {
+        builtBy(tasks.named("wasmJsBrowserDistribution"))
+    }
+}
