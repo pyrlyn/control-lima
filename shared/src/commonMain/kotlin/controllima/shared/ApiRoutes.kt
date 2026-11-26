@@ -35,6 +35,8 @@ object ApiRoutes {
     const val STATS_WS = "/ws/stats"
     const val EVENTS_WS = "/ws/events"
     const val LOGS_WS = "/ws/logs"
+    /** Query `target=vm:…&rows=&cols=`; frames are raw terminal text both ways. */
+    const val TERMINAL_WS = "/ws/terminal"
 
     /** Header carrying the access token; `?token=` works for the first page load and WebSockets only. */
     const val TOKEN_HEADER = "X-ControlLima-Token"

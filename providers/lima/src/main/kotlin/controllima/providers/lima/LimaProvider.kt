@@ -2,6 +2,7 @@ package controllima.providers.lima
 
 import controllima.providers.process.CommandResult
 import controllima.providers.process.CommandRunner
+import controllima.providers.process.InteractiveProcess
 import controllima.providers.process.StreamHandle
 import controllima.shared.Names
 import controllima.shared.PortForward
@@ -293,11 +294,12 @@ object LimaJson {
  * instances). One persistent session per VM streams /proc for stats (docs/plan/metrics.md).
  */
 class GuestShell(private val runner: CommandRunner, private val ssh: String = "ssh") {
-    fun command(sshConfigFile: String, instance: String, remote: String): List<String> {
+    fun command(sshConfigFile: String, instance: String, remote: String, tty: Boolean = false): List<String> {
         if (!Names.isValidVmName(instance)) throw ProviderException("Invalid instance name: $instance")
         if (!File(sshConfigFile).isAbsolute) throw ProviderException("ssh config must be an absolute path")
-        return listOf(
-            ssh, "-F", sshConfigFile,
+        // -tt makes the guest allocate a pty although our stdin is a pipe, not a terminal.
+        return listOfNotNull(
+            ssh, if (tty) "-tt" else null, "-F", sshConfigFile,
             "-o", "BatchMode=yes", "-o", "ConnectTimeout=3",
             "-o", "ServerAliveInterval=5", "-o", "ServerAliveCountMax=2",
             "lima-$instance", "--", remote,
@@ -310,6 +312,22 @@ class GuestShell(private val runner: CommandRunner, private val ssh: String = "s
     fun statsStream(sshConfigFile: String, instance: String, intervalSeconds: Int, onSnapshot: (GuestSnapshot) -> Unit, onExit: (Int?) -> Unit): StreamHandle {
         val parser = GuestStatsParser(onSnapshot)
         return runner.stream(command(sshConfigFile, instance, GuestStatsParser.script(intervalSeconds)), onLine = parser::accept, onExit = onExit)
+    }
+
+    /**
+     * A login shell in the guest on a pty of [rows] x [cols]. Our side is a pipe, so ssh has no local modes
+     * to copy and the guest pty starts raw: no echo, no CR before LF, no Ctrl-C. `stty sane` gives it the
+     * modes a real terminal would have. The size is set once too: ssh cannot resize a pty without a local
+     * terminal, so a resize reconnects (docs/pages/vm-detail.md).
+     */
+    fun terminal(sshConfigFile: String, instance: String, rows: Int, cols: Int, onOutput: (String) -> Unit, onExit: (Int?) -> Unit): InteractiveProcess {
+        val remote = "stty sane iutf8 rows $rows cols $cols 2>/dev/null; exec \"\${SHELL:-/bin/sh}\" -l"
+        return runner.interactive(command(sshConfigFile, instance, remote, tty = true), mapOf("TERM" to TERM), onOutput, onExit)
+    }
+
+    companion object {
+        /** What the web terminal's emulator understands; `xterm` keeps programs off 256-color and mouse modes. */
+        const val TERM = "xterm"
     }
 
     /** Guest IPs via `ip -j addr`. */

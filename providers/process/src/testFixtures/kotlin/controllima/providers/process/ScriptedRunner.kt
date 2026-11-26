@@ -14,6 +14,9 @@ class ScriptedRunner(
     val stdins = mutableListOf<String?>()
     val streams = mutableListOf<List<String>>()
     var streamLines: List<String> = emptyList()
+    val interactives = mutableListOf<Pair<List<String>, Map<String, String>>>()
+    /** What the fake terminal prints first; afterwards it echoes every write back, like a pty with echo on. */
+    var banner: String = ""
 
     override fun run(command: List<String>, timeout: Duration, env: Map<String, String>, stdin: String?, onLine: ((String) -> Unit)?): CommandResult {
         synchronized(this) { calls += command; stdins += stdin }
@@ -30,6 +33,22 @@ class ScriptedRunner(
         return object : StreamHandle {
             override val alive = false
             override fun close() {}
+        }
+    }
+
+    override fun interactive(command: List<String>, env: Map<String, String>, onOutput: (String) -> Unit, onExit: (Int?) -> Unit): InteractiveProcess {
+        synchronized(this) { interactives += command to env }
+        if (banner.isNotEmpty()) onOutput(banner)
+        return object : InteractiveProcess {
+            @Volatile override var alive = true
+            override fun write(text: String): Boolean {
+                if (!alive) return false
+                onOutput(text)
+                return true
+            }
+            override fun close() {
+                if (alive) { alive = false; onExit(null) }
+            }
         }
     }
 

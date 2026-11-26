@@ -18,6 +18,12 @@ interface StreamHandle : AutoCloseable {
     val alive: Boolean
 }
 
+/** A process with a writable stdin, such as an `ssh -tt` login shell. Closing it kills the process tree. */
+interface InteractiveProcess : StreamHandle {
+    /** Writes UTF-8 text to stdin; false once the process is gone. */
+    fun write(text: String): Boolean
+}
+
 /** Our interface for running a CLI. Providers depend on this, tests pass a fake. */
 interface CommandRunner {
     /**
@@ -39,6 +45,17 @@ interface CommandRunner {
         onLine: (String) -> Unit,
         onExit: (Int?) -> Unit = {},
     ): StreamHandle = throw UnsupportedOperationException("streaming not supported by ${this::class.simpleName}")
+
+    /**
+     * Starts [command] with stdin open. Output (stdout and stderr merged) goes to [onOutput] in chunks as it
+     * arrives, not in lines, because a terminal prints prompts and escape sequences without newlines.
+     */
+    fun interactive(
+        command: List<String>,
+        env: Map<String, String> = emptyMap(),
+        onOutput: (String) -> Unit,
+        onExit: (Int?) -> Unit = {},
+    ): InteractiveProcess = throw UnsupportedOperationException("interactive processes not supported by ${this::class.simpleName}")
 }
 
 /** [CommandRunner] on top of [ProcessBuilder]. Kills the process tree when the timeout passes. */
@@ -88,8 +105,38 @@ class ProcessCommandRunner : CommandRunner {
         }
     }
 
-    private fun start(command: List<String>, env: Map<String, String>): Process {
-        val builder = ProcessBuilder(command)
+    override fun interactive(command: List<String>, env: Map<String, String>, onOutput: (String) -> Unit, onExit: (Int?) -> Unit): InteractiveProcess {
+        val process = start(command, env, mergeStderr = true)
+        val stdin = process.outputStream
+        Thread({
+            // The reader decodes UTF-8 across chunk boundaries, so a split multi-byte character is never mangled.
+            runCatching {
+                process.inputStream.reader(Charsets.UTF_8).use { r ->
+                    val buf = CharArray(8192)
+                    while (true) {
+                        val n = r.read(buf)
+                        if (n < 0) break
+                        onOutput(String(buf, 0, n))
+                    }
+                }
+            }
+            val code = runCatching { process.waitFor() }.getOrNull()
+            onExit(code)
+        }, "interactive-out").apply { isDaemon = true; start() }
+        return object : InteractiveProcess {
+            override val alive: Boolean get() = process.isAlive
+            override fun write(text: String): Boolean = runCatching {
+                synchronized(stdin) {
+                    stdin.write(text.toByteArray(Charsets.UTF_8))
+                    stdin.flush()
+                }
+            }.isSuccess
+            override fun close() = killTree(process)
+        }
+    }
+
+    private fun start(command: List<String>, env: Map<String, String>, mergeStderr: Boolean = false): Process {
+        val builder = ProcessBuilder(command).redirectErrorStream(mergeStderr)
         builder.environment().putAll(env)
         return builder.start()
     }

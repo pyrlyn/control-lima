@@ -135,6 +135,8 @@ class LiveSocket(
     private val onMessage: (String) -> Unit,
     private val onOpen: (LiveSocket) -> Unit = {},
     private val onState: (Boolean) -> Unit = {},
+    /** Live views reconnect with backoff; a terminal must not, or a closed shell would silently reopen. */
+    private val reconnect: Boolean = true,
 ) {
     private var ws: WebSocket? = null
     private var closed = false
@@ -165,7 +167,7 @@ class LiveSocket(
         }
         socket.onclose = {
             onState(false)
-            if (!closed) {
+            if (!closed && reconnect) {
                 window.setTimeout({ if (!closed) connect(); null }, retryMillis)
                 retryMillis = (retryMillis * 2).coerceAtMost(15_000)
             }

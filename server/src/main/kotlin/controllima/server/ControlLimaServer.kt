@@ -86,6 +86,7 @@ class ControlLimaServer(
         services = Services(
             config, paths, settings, backends, access, audit, events, actions, inventory, containers, stats, ports,
             metrics, alerts, channels, notifier, logs, backups, templates, disk, about, VmEditService(paths, backends, backups), kube,
+            TerminalService(backends, inventory, audit, { settings.current }),
         )
         server = KtorHttpServer(config.host, config.port, Api(services))
     }

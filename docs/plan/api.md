@@ -72,6 +72,9 @@ All endpoints are on `127.0.0.1:<port>`. JSON bodies use the models in `shared`.
   Client may send `{"subscribe": [...]}` / `{"unsubscribe": [...]}`.
 - `/ws/events`: VM/container state changes, alert events, long-running action progress.
 - `/ws/logs?source=...&follow=true&since=`: log lines `{ts, stream, line}`.
+- `/ws/terminal?target=vm:<source>/<name>[@home]&rows=&cols=` (v2): raw terminal text both ways. Refused
+  with 403 unless `webTerminal` is on and the caller is admin; a stopped VM or a fifth session gets a
+  message in the stream and a close.
 
 ## Long-running actions
 

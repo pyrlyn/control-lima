@@ -409,6 +409,8 @@ data class Settings(
     val units: SizeUnits = SizeUnits.BINARY,
     val updateCheck: Boolean = false,
     val multiUser: Boolean = false,
+    /** Admins may open a shell in a running VM from the browser. Off by default: it is full guest access. */
+    val webTerminal: Boolean = false,
     val backupSchedule: BackupSchedule = BackupSchedule(),
     val redactionPatterns: List<String> = listOf("(?i)(password|passwd|secret|token|api[_-]?key)=\\S+"),
 )

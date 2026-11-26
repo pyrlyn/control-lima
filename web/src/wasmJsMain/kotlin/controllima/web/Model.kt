@@ -92,6 +92,7 @@ class AppModel(val api: ApiClient, val scope: CoroutineScope) {
     var firing by mutableStateOf<List<AlertEvent>>(emptyList())
     var units by mutableStateOf(SizeUnits.BINARY)
     var theme by mutableStateOf(Theme.SYSTEM)
+    var webTerminal by mutableStateOf(false)
     var serverVersion by mutableStateOf<String?>(null)
     var connected by mutableStateOf(true)
 
@@ -174,6 +175,7 @@ class AppModel(val api: ApiClient, val scope: CoroutineScope) {
     fun applySettings(settings: Settings) {
         units = settings.units
         theme = settings.theme
+        webTerminal = settings.webTerminal
     }
 
     private fun afterLogin() {

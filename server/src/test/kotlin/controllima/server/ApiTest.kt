@@ -9,6 +9,7 @@ import controllima.shared.CreatedToken
 import controllima.shared.Role
 import controllima.shared.Session
 import controllima.shared.VmList
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import java.nio.file.Files
 import kotlin.test.AfterTest
@@ -88,6 +89,56 @@ class ApiTest {
         assertEquals(403, call("GET", ApiRoutes.VMS, headers = mapOf("Host" to "evil.example:8787")).status)
         assertEquals(403, call("GET", ApiRoutes.VMS, headers = mapOf("Origin" to "http://evil.example")).status)
         assertEquals(200, call("GET", ApiRoutes.VMS, headers = mapOf("Origin" to "http://localhost:8787")).status)
+    }
+
+    private class FakeSocket(vararg typed: String) : controllima.server.http.WsChannel {
+        private val input = kotlinx.coroutines.channels.Channel<String>(kotlinx.coroutines.channels.Channel.UNLIMITED).also { c -> typed.forEach { c.trySend(it) } }
+        val sent = java.util.concurrent.CopyOnWriteArrayList<String>()
+        @Volatile var closed: String? = null
+        override suspend fun send(text: String) { sent += text }
+        override suspend fun receive(): String? = input.receiveCatching().getOrNull()
+        override suspend fun close(reason: String) { closed = reason; input.close() }
+        fun hangUp() = input.close()
+    }
+
+    private fun upgrade(path: String, auth: String): controllima.server.http.Upgrade = runBlocking {
+        val (p, q) = path.substringBefore('?') to path.substringAfter('?', "")
+        val query = q.split('&').filter { it.isNotEmpty() }.groupBy({ it.substringBefore('=') }, { it.substringAfter('=') })
+        api.upgrade(Request("GET", p, query, mapOf("Host" to "127.0.0.1:8787", ApiRoutes.TOKEN_HEADER to auth), ByteArray(0)))
+    }
+
+    @Test
+    fun `web terminal is opt in, admin only and relays a running vm shell`() {
+        call("GET", ApiRoutes.VMS)
+        val running = "${ApiRoutes.TERMINAL_WS}?target=vm:lima/infra-test&rows=24&cols=80"
+        val off = upgrade(running, token) as controllima.server.http.Upgrade.Refused
+        assertEquals(403, off.response.status)
+
+        val operator = namedToken(Role.OPERATOR)
+        server.services.settings.update(server.services.settings.current.copy(webTerminal = true))
+        assertEquals(403, (upgrade(running, operator) as controllima.server.http.Upgrade.Refused).response.status)
+        assertEquals(400, (upgrade("${ApiRoutes.TERMINAL_WS}?target=vm:lima/infra-test&rows=24&cols=9999", token) as controllima.server.http.Upgrade.Refused).response.status)
+
+        runner.banner = "$ "
+        val socket = FakeSocket("ls\r")
+        val session = upgrade(running, token) as controllima.server.http.Upgrade.Accepted
+        runBlocking {
+            val job = launch { session.session(socket) }
+            kotlinx.coroutines.withTimeout(5_000) { while (socket.sent.joinToString("") != "$ ls\r") kotlinx.coroutines.delay(10) }
+            socket.hangUp()
+            job.join()
+        }
+        val (cmd, env) = runner.interactives.single()
+        assertTrue("-tt" in cmd && "lima-infra-test" in cmd, cmd.toString())
+        assertEquals("xterm", env["TERM"])
+        val audit = server.services.audit.query().map { it.action }
+        assertTrue("terminal.open" in audit && "terminal.close" in audit, audit.toString())
+
+        val stopped = FakeSocket()
+        val refused = upgrade("${ApiRoutes.TERMINAL_WS}?target=vm:lima/tc-dev-1&rows=24&cols=80", token) as controllima.server.http.Upgrade.Accepted
+        runBlocking { refused.session(stopped) }
+        assertTrue(stopped.closed!!.contains("not running"), stopped.closed)
+        assertEquals(1, runner.interactives.size, "a stopped VM is never contacted")
     }
 
     @Test

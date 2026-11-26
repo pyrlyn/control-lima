@@ -149,6 +149,16 @@ class LimaProviderTest {
     }
 
     @Test
+    fun terminalAsksForAPtyAndSetsItsSize() {
+        val runner = ScriptedRunner()
+        GuestShell(runner).terminal("/tmp/lima/dev/ssh.config", "dev", 30, 100, {}, {})
+        val (cmd, env) = runner.interactives.single()
+        assertEquals(listOf("ssh", "-tt", "-F", "/tmp/lima/dev/ssh.config"), cmd.take(4))
+        assertTrue(cmd.last().startsWith("stty sane iutf8 rows 30 cols 100"))
+        assertEquals("xterm", env["TERM"])
+    }
+
+    @Test
     fun snapshotsListIsOneTagPerLine() {
         val lima = LimactlProvider(ScriptedRunner(listOf("snapshot list" to ScriptedRunner.ok("before-upgrade\nclean\n"))))
         assertEquals(listOf("before-upgrade", "clean"), lima.snapshots("dev"))

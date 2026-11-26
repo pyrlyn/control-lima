@@ -103,6 +103,7 @@ class Services(
     val about: AboutService,
     val vmEdit: VmEditService,
     val kube: KubernetesService,
+    val terminal: TerminalService,
 )
 
 /**
@@ -661,6 +662,12 @@ class Api(internal val s: Services, private val static: StaticFiles = StaticFile
                 val source = request.param("source") ?: return Upgrade.Refused(Response.error(400, "bad_request", "source is required"))
                 val tail = request.param("tail")?.toIntOrNull() ?: 500
                 Upgrade.Accepted { ch -> logsSession(ch, source, tail, principal) }
+            }
+            ApiRoutes.TERMINAL_WS -> try {
+                val req = s.terminal.authorize(principal, request.param("target"), request.param("rows"), request.param("cols"))
+                Upgrade.Accepted { ch -> s.terminal.session(ch, principal, req) }
+            } catch (e: HttpError) {
+                Upgrade.Refused(Response.error(e.status, e.code, e.message))
             }
             else -> Upgrade.Refused(Response.error(404, "not_found", "No such WebSocket"))
         }

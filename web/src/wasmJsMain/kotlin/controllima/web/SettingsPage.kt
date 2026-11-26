@@ -88,6 +88,7 @@ private fun GeneralTab(m: AppModel, s: Settings, save: (Settings) -> Unit) {
     var units by remember(s) { mutableStateOf(s.units) }
     var compact by remember(s) { mutableStateOf(s.compact) }
     var multiUser by remember(s) { mutableStateOf(s.multiUser) }
+    var webTerminal by remember(s) { mutableStateOf(s.webTerminal) }
     val ints = listOf(live, background, probe).map { it.toIntOrNull() }
     val intsOk = ints.all { it != null && it in 1..3600 }
     val homesOk = lines(homes).all { it.startsWith("/") }
@@ -117,8 +118,12 @@ private fun GeneralTab(m: AppModel, s: Settings, save: (Settings) -> Unit) {
             Picker("Theme", Theme.entries, theme, { it.name.lowercase() }) { theme = it }
             Picker("Sizes", SizeUnits.entries, units, { if (it == SizeUnits.BINARY) "GiB (1024)" else "GB (1000)" }) { units = it }
             Toggle("Compact tables", compact, admin) { compact = it }
-            Toggle("Multi-user sign-in", multiUser, admin) { multiUser = it }
         }
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Toggle("Multi-user sign-in", multiUser, admin) { multiUser = it }
+            Toggle("Web terminal for admins", webTerminal, admin) { webTerminal = it }
+        }
+        if (webTerminal) Text("Admins can open a shell in any running VM from the browser. Sessions are audited.", style = MaterialTheme.typography.bodySmall)
     }
     RoleButton(m, Strings.SAVE, Role.ADMIN, enabled = intsOk && homesOk) {
         save(
@@ -127,6 +132,7 @@ private fun GeneralTab(m: AppModel, s: Settings, save: (Settings) -> Unit) {
                 limactlPath = limactl.trim(), colimaPath = colima.trim(), limaArgs = words(limaArgs), colimaArgs = words(colimaArgs),
                 liveIntervalSeconds = ints[0]!!, backgroundIntervalSeconds = ints[1]!!, probeTimeoutSeconds = ints[2]!!,
                 theme = theme, units = units, compact = compact, multiUser = multiUser,
+                webTerminal = webTerminal,
             ),
         )
     }

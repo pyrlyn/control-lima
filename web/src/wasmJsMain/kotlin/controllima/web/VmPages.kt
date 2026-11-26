@@ -391,7 +391,8 @@ fun VmDetailPage(m: AppModel, ref: VmRef) {
     }
     VmActions(m, vm, compact = false) { m.navigate(Screen.Main(Page.Vms)) }
 
-    Tabs(listOf("Summary", "Charts", "Config", "Logs", "Backups", "Alerts", "Snapshots"), tab) { tab = it }
+    val terminal = m.webTerminal && m.can(Role.ADMIN)
+    Tabs(listOf("Summary", "Charts", "Config", "Logs", "Backups", "Alerts", "Snapshots") + if (terminal) listOf("Terminal") else emptyList(), tab) { tab = it }
     when (tab) {
         0 -> {
             Section("Summary") {
@@ -434,6 +435,7 @@ fun VmDetailPage(m: AppModel, ref: VmRef) {
         4 -> VmBackups(m, target)
         5 -> VmAlerts(m, target)
         6 -> VmSnapshotsTab(m, vm)
+        7 -> if (terminal) VmTerminalTab(m, vm)
     }
 }
 
