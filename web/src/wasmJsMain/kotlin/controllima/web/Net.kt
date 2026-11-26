@@ -36,20 +36,15 @@ class XhrTransport : HttpTransport {
                 null
             }
             xhr.ontimeout = {
-                if (cont.isActive) cont.resume(HttpResult(0, """{"code":"timeout","message":"The server did not answer in time"}"""))
+                if (cont.isActive) cont.resume(HttpResult(0, TIMEOUT_ERROR))
                 null
             }
             cont.invokeOnCancellation { xhr.abort() }
             if (body != null) xhr.send(body) else xhr.send()
         }
-
-    companion object {
-        const val NETWORK_ERROR = """{"code":"network","message":"Cannot reach ControlLima. Is control-lima still running?"}"""
-    }
 }
 
-/** Downloads [path] with the auth header (a plain link cannot carry it) and saves it as [fileName]. */
-fun downloadAuthorized(path: String, token: String, fileName: String, onError: (String) -> Unit) {
+actual fun downloadAuthorized(path: String, token: String, fileName: String, onError: (String) -> Unit) {
     val xhr = XMLHttpRequest()
     xhr.open("GET", path)
     if (token.isNotEmpty()) xhr.setRequestHeader(ApiRoutes.TOKEN_HEADER, token)
@@ -65,8 +60,7 @@ fun downloadAuthorized(path: String, token: String, fileName: String, onError: (
     xhr.send()
 }
 
-/** Asks the user for a file and POSTs its raw bytes to [path]. */
-fun uploadFile(path: String, headers: Map<String, String>, accept: String, onDone: (Int, String) -> Unit) {
+actual fun uploadFile(path: String, headers: Map<String, String>, accept: String, onDone: (Int, String) -> Unit) {
     val input = document.createElement("input") as HTMLInputElement
     input.type = "file"
     input.accept = accept
@@ -82,7 +76,7 @@ fun uploadFile(path: String, headers: Map<String, String>, accept: String, onDon
                 null
             }
             xhr.onerror = {
-                onDone(0, NETWORK_ERROR_TEXT)
+                onDone(0, NETWORK_ERROR)
                 null
             }
             xhr.send(file)
@@ -92,16 +86,13 @@ fun uploadFile(path: String, headers: Map<String, String>, accept: String, onDon
     input.click()
 }
 
-private const val NETWORK_ERROR_TEXT = XhrTransport.NETWORK_ERROR
-
 private fun saveBlob(blob: Blob, fileName: String) {
     val url = URL.createObjectURL(blob)
     clickLink(url, fileName)
     window.setTimeout({ URL.revokeObjectURL(url); null }, 10_000)
 }
 
-/** Saves text produced in the page (CSV export, log range) as a file. */
-fun saveText(text: String, fileName: String, mime: String = "text/plain") {
+actual fun saveText(text: String, fileName: String, mime: String) {
     clickLink("data:$mime;charset=utf-8," + encodeUriComponent(text), fileName)
 }
 
@@ -115,34 +106,44 @@ private fun clickLink(href: String, fileName: String) {
 }
 
 @JsFun("(s) => encodeURIComponent(s)")
-external fun encodeUriComponent(s: String): String
+private external fun encodeUriComponent(s: String): String
 
 @JsFun("(s) => { try { navigator.clipboard.writeText(s); return true } catch (e) { return false } }")
-external fun copyToClipboard(s: String): Boolean
+private external fun writeClipboard(s: String): Boolean
 
-/** Opens a forwarded port in a new tab, never in this one, and without an opener reference. */
-fun openExternal(url: String) {
+actual fun copyToClipboard(s: String): Boolean = writeClipboard(s)
+
+/** A new tab, without an opener reference. */
+actual fun openExternal(url: String) {
     window.open(url, "_blank", "noopener,noreferrer")
 }
 
+actual fun LiveSocket(
+    path: String,
+    token: () -> String,
+    onMessage: (String) -> Unit,
+    onOpen: (LiveSocket) -> Unit,
+    onState: (Boolean) -> Unit,
+    reconnect: Boolean,
+): LiveSocket = BrowserSocket(path, token, onMessage, onOpen, onState, reconnect)
+
 /**
- * A WebSocket that reconnects with backoff. The launch token goes in the query because browsers
- * cannot set headers on WebSockets; the server accepts `?token=` only on `/ws/` (docs/plan/auth.md).
+ * The launch token goes in the query because browsers cannot set headers on WebSockets; the server
+ * accepts `?token=` only on `/ws/` (docs/plan/auth.md).
  */
-class LiveSocket(
+private class BrowserSocket(
     private val path: String,
     private val token: () -> String,
     private val onMessage: (String) -> Unit,
-    private val onOpen: (LiveSocket) -> Unit = {},
-    private val onState: (Boolean) -> Unit = {},
-    /** Live views reconnect with backoff; a terminal must not, or a closed shell would silently reopen. */
-    private val reconnect: Boolean = true,
-) {
+    private val onOpen: (LiveSocket) -> Unit,
+    private val onState: (Boolean) -> Unit,
+    private val reconnect: Boolean,
+) : LiveSocket {
     private var ws: WebSocket? = null
     private var closed = false
     private var retryMillis = 1_000
 
-    fun open(): LiveSocket {
+    override fun open(): LiveSocket {
         closed = false
         connect()
         return this
@@ -175,12 +176,12 @@ class LiveSocket(
         }
     }
 
-    fun send(text: String) {
+    override fun send(text: String) {
         val socket = ws ?: return
         if (socket.readyState == WebSocket.OPEN) socket.send(text)
     }
 
-    fun close() {
+    override fun close() {
         closed = true
         ws?.close()
         ws = null

@@ -1,7 +1,7 @@
 # Pages
 
 One file per page or screen. Keep this list, the files and the `Page` enum in
-`web/src/wasmJsMain/kotlin/controllima/web/App.kt` in sync (see AGENTS.md).
+`web/src/commonMain/kotlin/controllima/web/App.kt` in sync (see AGENTS.md).
 
 Every page doc has: purpose, data shown, actions, states (empty, loading, error, unresponsive), API
 endpoints, and a `Figma:` line. Until the Figma file exists the line says `Figma: TBD`.

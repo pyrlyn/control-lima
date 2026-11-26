@@ -46,6 +46,8 @@ class ModelsTest {
         assertEquals("/api/vms/lima/dev", ApiRoutes.vm(VmRef(VmSource.LIMA, "dev")))
         assertEquals("/api/vms/lima/dev/stop?home=%2Ftmp%2Fh", ApiRoutes.vmAction(VmRef(VmSource.LIMA, "dev", "/tmp/h"), "stop"))
         assertEquals("a%20b%C3%A9", ApiRoutes.encode("a bé"))
+        assertEquals("a bé/x", ApiRoutes.decode(ApiRoutes.encode("a bé/x")))
+        assertEquals("100%zz é%", ApiRoutes.decode("100%zz é%"), "malformed escapes stay as they are")
     }
 
     @Test

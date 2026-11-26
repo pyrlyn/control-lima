@@ -338,7 +338,7 @@ fun BackupsPage(m: AppModel) {
                     Row {
                         SmallAction("Restore", m.can(Role.ADMIN)) { restoring = b }
                         SmallAction("Download", m.can(Role.ADMIN)) {
-                            downloadAuthorized("${ApiRoutes.BACKUPS}/${encodeUriComponent(b.id)}/download", m.api.token, "${b.id}.tar.gz") { m.toast(it) }
+                            downloadAuthorized("${ApiRoutes.BACKUPS}/${ApiRoutes.encode(b.id)}/download", m.api.token, "${b.id}.tar.gz") { m.toast(it) }
                         }
                         SmallAction(Strings.DELETE, m.can(Role.ADMIN), danger = true) { deleting = b }
                     }

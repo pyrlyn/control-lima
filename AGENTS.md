@@ -12,7 +12,7 @@ Never invent Figma URLs. Until the file exists, every page doc says `Figma: TBD`
 ## Page docs (required)
 
 - Every page or screen of the web UI has a file `docs/pages/<page>.md`. The list is in
-  `docs/pages/README.md` and matches the `Page` enum in `web/src/wasmJsMain/kotlin/controllima/web/App.kt`.
+  `docs/pages/README.md` and matches the `Page` enum in `web/src/commonMain/kotlin/controllima/web/App.kt`.
 - Each page doc contains: purpose, data shown, actions, states (empty, loading, error, unresponsive),
   API endpoints used, and a `Figma:` line linking the exact frame or page
   (a URL with `node-id`, e.g. `https://www.figma.com/design/<fileKey>/ControlLima?node-id=12-345`).

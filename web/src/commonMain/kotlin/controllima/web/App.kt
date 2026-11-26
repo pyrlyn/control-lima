@@ -1,5 +1,6 @@
 package controllima.web
 
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -39,13 +40,12 @@ import androidx.compose.ui.input.key.isAltPressed
 import androidx.compose.ui.input.key.isCtrlPressed
 import androidx.compose.ui.input.key.isMetaPressed
 import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import controllima.shared.ApiException
 import controllima.shared.Theme
-import kotlinx.browser.window
 import kotlinx.coroutines.launch
 
 /** Every page of the app. Each has docs/pages/<doc>.md; keep them in sync (AGENTS.md). */
@@ -69,7 +69,7 @@ fun App(m: AppModel) {
     val dark = when (m.theme) {
         Theme.DARK -> true
         Theme.LIGHT -> false
-        Theme.SYSTEM -> window.matchMedia("(prefers-color-scheme: dark)").matches
+        Theme.SYSTEM -> isSystemInDarkTheme()
     }
     MaterialTheme(colorScheme = if (dark) darkColorScheme() else lightColorScheme()) {
         Surface(Modifier.fillMaxSize()) {
@@ -131,9 +131,10 @@ private fun Shell(m: AppModel) {
     // "g" then a page key, as in docs/plan/i18n-accessibility.md; "/" focuses the page's search.
     var pendingG by remember { mutableStateOf(false) }
     Scaffold(
-        modifier = Modifier.onPreviewKeyEvent { e ->
-            if (e.type != KeyEventType.KeyDown || e.isCtrlPressed || e.isMetaPressed || e.isAltPressed) return@onPreviewKeyEvent false
-            if (isTyping()) return@onPreviewKeyEvent false
+        // After the focused element, not before: a text field consumes the keys typed into it, so shortcuts
+        // only see keys nobody else wanted.
+        modifier = Modifier.onKeyEvent { e ->
+            if (e.type != KeyEventType.KeyDown || e.isCtrlPressed || e.isMetaPressed || e.isAltPressed) return@onKeyEvent false
             when {
                 pendingG -> {
                     pendingG = false
@@ -172,7 +173,7 @@ private fun Shell(m: AppModel) {
                 Text(Strings.SHORTCUTS, Modifier.padding(12.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             Column(Modifier.fillMaxSize().padding(horizontal = 24.dp, vertical = 16.dp).verticalScroll(rememberScrollState())) {
-                if (m.versionMismatch) Banner(Strings.VERSION_MISMATCH, BannerKind.INFO, Strings.RELOAD to { window.location.reload() })
+                if (m.versionMismatch) Banner(Strings.VERSION_MISMATCH, BannerKind.INFO, Strings.RELOAD to { reloadApp() })
                 if (!m.connected) Banner(Strings.DISCONNECTED, BannerKind.WARNING)
                 when (val s = m.screen) {
                     is Screen.VmDetail -> VmDetailPage(m, s.ref)
@@ -198,6 +199,3 @@ private fun Shell(m: AppModel) {
     }
 }
 
-/** Shortcuts must not fire while the user types into a field. */
-@JsFun("() => { const e = document.activeElement; return !!e && (e.tagName === 'INPUT' || e.tagName === 'TEXTAREA' || e.isContentEditable) }")
-private external fun isTyping(): Boolean

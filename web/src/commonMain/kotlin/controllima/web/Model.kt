@@ -30,7 +30,6 @@ import controllima.shared.StatsSubscription
 import controllima.shared.VmList
 import controllima.shared.VmRef
 import controllima.shared.VmSource
-import kotlinx.browser.window
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -46,9 +45,9 @@ sealed class Screen {
 
     fun hash(): String = when (this) {
         is Main -> "#/${page.doc}"
-        is VmDetail -> "#/vm/${ref.source.slug}/${encodeUriComponent(ref.name)}" + (ref.home?.let { "?home=${encodeUriComponent(it)}" } ?: "")
-        is ContainerDetail -> "#/container/${encodeUriComponent(profile)}/${encodeUriComponent(id)}"
-        is Logs -> "#/logs" + (source?.let { "?source=${encodeUriComponent(it)}" } ?: "")
+        is VmDetail -> "#/vm/${ref.source.slug}/${ApiRoutes.encode(ref.name)}" + (ref.home?.let { "?home=${ApiRoutes.encode(it)}" } ?: "")
+        is ContainerDetail -> "#/container/${ApiRoutes.encode(profile)}/${ApiRoutes.encode(id)}"
+        is Logs -> "#/logs" + (source?.let { "?source=${ApiRoutes.encode(it)}" } ?: "")
     }
 
     companion object {
@@ -56,8 +55,8 @@ sealed class Screen {
             val raw = hash.removePrefix("#").removePrefix("/")
             val path = raw.substringBefore('?')
             val query = raw.substringAfter('?', "").split('&').filter { '=' in it }
-                .associate { decodeUriComponent(it.substringBefore('=')) to decodeUriComponent(it.substringAfter('=')) }
-            val parts = path.split('/').map(::decodeUriComponent)
+                .associate { ApiRoutes.decode(it.substringBefore('=')) to ApiRoutes.decode(it.substringAfter('=')) }
+            val parts = path.split('/').map(ApiRoutes::decode)
             return when {
                 parts.size == 3 && parts[0] == "vm" -> VmSource.fromSlug(parts[1])?.let { VmDetail(VmRef(it, parts[2], query["home"])) }
                 parts.size == 3 && parts[0] == "container" -> ContainerDetail(parts[1], parts[2])
@@ -68,11 +67,9 @@ sealed class Screen {
     }
 }
 
-@JsFun("(s) => { try { return decodeURIComponent(s) } catch (e) { return s } }")
-external fun decodeUriComponent(s: String): String
-
 /** App-wide state: session, inventory, live stats and events. Pages read it and call [api]. */
-class AppModel(val api: ApiClient, val scope: CoroutineScope) {
+/** [onSignOut] lets the browser drop the launch token it kept for reloads. */
+class AppModel(val api: ApiClient, val scope: CoroutineScope, private val onSignOut: () -> Unit = {}) {
     val snackbar = SnackbarHostState()
 
     /** Set by the page that has a search field, for the `/` shortcut. */
@@ -80,7 +77,7 @@ class AppModel(val api: ApiClient, val scope: CoroutineScope) {
 
     var session by mutableStateOf<Session?>(null)
     var authProblem by mutableStateOf<AuthProblem?>(null)
-    var screen by mutableStateOf(Screen.parse(window.location.hash))
+    var screen by mutableStateOf(Screen.parse(currentHash()))
         private set
 
     var vms by mutableStateOf<VmList?>(null)
@@ -116,11 +113,11 @@ class AppModel(val api: ApiClient, val scope: CoroutineScope) {
     fun navigate(to: Screen) {
         screen = to
         val hash = to.hash()
-        if (window.location.hash != hash) window.history.pushState(null, "", hash)
+        if (currentHash() != hash) pushHash(hash)
     }
 
     fun onHashChange() {
-        screen = Screen.parse(window.location.hash)
+        screen = Screen.parse(currentHash())
     }
 
     // ---------- startup ----------
@@ -163,7 +160,7 @@ class AppModel(val api: ApiClient, val scope: CoroutineScope) {
     fun logout() {
         scope.launch {
             runCatching { api.logout() }
-            Auth.forget()
+            onSignOut()
             api.token = ""
             stopLive()
             session = null
@@ -358,32 +355,6 @@ class AppModel(val api: ApiClient, val scope: CoroutineScope) {
 }
 
 object Clock {
-    fun now(): Long = dateNow().toLong()
-}
-
-@JsFun("() => Date.now()")
-private external fun dateNow(): Double
-
-/**
- * The launch token moves from the URL to memory, and to sessionStorage so a reload of this tab keeps
- * working (docs/plan/auth.md allows it); it is removed from the address bar and history at once.
- */
-object Auth {
-    private const val KEY = "controllima.token"
-
-    fun takeToken(): String {
-        val params = window.location.search.removePrefix("?").split('&').filter { '=' in it }
-            .associate { it.substringBefore('=') to decodeUriComponent(it.substringAfter('=')) }
-        val fromUrl = params["token"]
-        if (fromUrl != null) {
-            runCatching { window.sessionStorage.setItem(KEY, fromUrl) }
-            window.history.replaceState(null, "", window.location.pathname + window.location.hash)
-            return fromUrl
-        }
-        return runCatching { window.sessionStorage.getItem(KEY) }.getOrNull().orEmpty()
-    }
-
-    fun forget() {
-        runCatching { window.sessionStorage.removeItem(KEY) }
-    }
+    @OptIn(kotlin.time.ExperimentalTime::class)
+    fun now(): Long = kotlin.time.Clock.System.now().toEpochMilliseconds()
 }

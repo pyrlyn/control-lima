@@ -124,7 +124,7 @@ private fun LogView(
     var nonce by remember { mutableStateOf(0) }
     if (follow) {
         DisposableEffect(source.id) {
-            val path = "${ApiRoutes.LOGS_WS}?source=${encodeUriComponent(source.id)}&tail=$TAIL"
+            val path = "${ApiRoutes.LOGS_WS}?source=${ApiRoutes.encode(source.id)}&tail=$TAIL"
             var socket: LiveSocket? = null
             socket = LiveSocket(path, { m.api.token }, onMessage = { text ->
                 val batch = runCatching { ApiJson.decodeFromString(LogBatch.serializer(), text) }.getOrNull() ?: return@LiveSocket

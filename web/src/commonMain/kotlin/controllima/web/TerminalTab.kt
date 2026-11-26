@@ -38,10 +38,6 @@ import controllima.shared.TermCell
 import controllima.shared.TerminalScreen
 import controllima.shared.Vm
 import controllima.shared.VmStatus
-import kotlinx.browser.window
-import org.w3c.dom.clipboard.ClipboardEvent
-import org.w3c.dom.events.Event
-import org.w3c.dom.events.KeyboardEvent
 
 private val SIZES = listOf(24 to 80, 32 to 120, 48 to 160)
 private val BACKGROUND = Color(0xFF1B1D21)
@@ -88,37 +84,16 @@ private fun TerminalView(m: AppModel, vm: Vm, rows: Int, cols: Int, onReconnect:
     var ended by remember { mutableStateOf(false) }
     // While captured, every key goes to the guest, page shortcuts included; release it to use the page.
     var captured by remember { mutableStateOf(true) }
-    DisposableEffect(Unit) {
+    val socket = remember {
         val path = "${ApiRoutes.TERMINAL_WS}?target=${ApiRoutes.encode(vm.ref.targetId)}&rows=$rows&cols=$cols"
-        val socket = LiveSocket(path, { m.api.token }, onMessage = { screen.feed(it); version++ }, reconnect = false, onState = { up ->
+        LiveSocket(path, { m.api.token }, onMessage = { screen.feed(it); version++ }, reconnect = false, onState = { up ->
             connected = up
             if (!up) ended = true
-        }).open()
-        // Keys are read from the DOM in the capture phase rather than through a Compose text field: the
-        // field's hidden input keeps its own buffer, and Compose would also act on its page shortcuts.
-        val onKey: (Event) -> Unit = { e ->
-            val k = e as KeyboardEvent
-            if (captured && !ended) keyBytes(k)?.let { bytes ->
-                socket.send(bytes)
-                k.preventDefault()
-                k.stopPropagation()
-            }
-        }
-        val onPaste: (Event) -> Unit = { e ->
-            val text = (e as ClipboardEvent).clipboardData?.getData("text/plain")
-            if (captured && !ended && !text.isNullOrEmpty()) {
-                socket.send(text.replace("\r\n", "\r").replace('\n', '\r'))
-                e.preventDefault()
-                e.stopPropagation()
-            }
-        }
-        window.addEventListener("keydown", onKey, true)
-        window.addEventListener("paste", onPaste, true)
-        onDispose {
-            window.removeEventListener("keydown", onKey, true)
-            window.removeEventListener("paste", onPaste, true)
-            socket.close()
-        }
+        })
+    }
+    DisposableEffect(socket) {
+        socket.open()
+        onDispose { socket.close() }
     }
 
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -139,7 +114,7 @@ private fun TerminalView(m: AppModel, vm: Vm, rows: Int, cols: Int, onReconnect:
     // each starts at its column whatever its own width. Digits are the most uniform width to size it by.
     val cell = remember { measurer.measure("0", BASE).size.let { it.width to it.height } }
     val density = LocalDensity.current
-    Box(Modifier.fillMaxWidth().background(BACKGROUND).horizontalScroll(rememberScrollState()).clickable { captured = true }.padding(8.dp)) {
+    Box(Modifier.terminalKeys({ captured && !ended }, socket::send).fillMaxWidth().background(BACKGROUND).horizontalScroll(rememberScrollState()).clickable { captured = true }.padding(8.dp)) {
         Canvas(Modifier.size(with(density) { (cell.first * cols).toDp() }, with(density) { (cell.second * rows).toDp() })) {
             // Reading version here redraws the canvas on new output.
             if (version < 0) return@Canvas
@@ -167,13 +142,21 @@ private fun colors(c: TermCell, inverse: Boolean): Pair<Color, Color?> {
 }
 
 /**
- * What an xterm sends for a key, or null to leave the key to the browser. Cmd shortcuts stay with the
- * browser, so Cmd+C copies and Cmd+V pastes (the paste arrives as a paste event).
+ * Sends keystrokes and pastes, as xterm bytes, to [send] while [active]. Each platform reads keys its own
+ * way; both translate them with [xtermBytes].
  */
-private fun keyBytes(e: KeyboardEvent): String? {
-    if (e.metaKey || e.isComposing) return null
-    val key = e.key
-    if (e.ctrlKey && key.length == 1) {
+@Composable
+expect fun Modifier.terminalKeys(active: () -> Boolean, send: (String) -> Unit): Modifier
+
+/** A paste is typed as-is, with line ends as Enter. */
+fun pasteBytes(text: String): String = text.replace("\r\n", "\r").replace('\n', '\r')
+
+/**
+ * What an xterm sends for [key], named as in DOM `KeyboardEvent.key` ("Enter", "ArrowUp", "a"), or null
+ * to leave the key to the app. Callers leave Cmd shortcuts alone, so copy and paste keep working.
+ */
+fun xtermBytes(key: String, ctrl: Boolean, alt: Boolean): String? {
+    if (ctrl && key.length == 1) {
         val c = key.lowercase()[0]
         return when (c) {
             in 'a'..'z' -> (c - 'a' + 1).toChar().toString()
@@ -201,8 +184,8 @@ private fun keyBytes(e: KeyboardEvent): String? {
         "Insert" -> "\u001b[2~"
         else -> null
     }
-    if (named != null) return if (e.altKey) "\u001b$named" else named
+    if (named != null) return if (alt) "\u001b$named" else named
     // A printable key names itself in one character (two for a surrogate pair); "Shift", "F5", "Dead" do not.
     if (key.isEmpty() || key.length > 2 || (key.length == 2 && !key[0].isHighSurrogate())) return null
-    return if (e.altKey) "\u001b$key" else key
+    return if (alt) "\u001b$key" else key
 }

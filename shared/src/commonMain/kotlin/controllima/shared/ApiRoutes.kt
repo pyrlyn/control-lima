@@ -59,6 +59,25 @@ object ApiRoutes {
             else append('%').append(((byte.toInt() and 0xff) or 0x100).toString(16).substring(1).uppercase())
         }
     }
+
+    /** Inverse of [encode]; a malformed escape is kept as it is rather than failing a whole URL. */
+    fun decode(value: String): String {
+        if ('%' !in value) return value
+        val bytes = ArrayList<Byte>(value.length)
+        var i = 0
+        while (i < value.length) {
+            val code = if (value[i] == '%' && i + 2 < value.length) value.substring(i + 1, i + 3).toIntOrNull(16) else null
+            if (code != null) {
+                bytes += code.toByte()
+                i += 3
+            } else {
+                val end = value.indexOf('%', i + 1).let { if (it < 0) value.length else it }
+                value.substring(i, end).encodeToByteArray().forEach { bytes += it }
+                i = end
+            }
+        }
+        return bytes.toByteArray().decodeToString()
+    }
 }
 
 /** Names that can never be deleted, whatever the role. Extended in settings. */
