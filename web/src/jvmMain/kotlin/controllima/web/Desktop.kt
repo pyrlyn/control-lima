@@ -67,6 +67,8 @@ actual fun pushHash(hash: String) {
 /** The server runs in this process, so it can never be a different version than the UI. */
 actual fun reloadApp() {}
 
+actual fun serverHost(): String = runCatching { URI(DesktopHost.baseUrl).authority }.getOrNull() ?: DesktopHost.baseUrl
+
 private fun chooseFile(title: String, mode: Int, fileName: String? = null): File? {
     val dialog = FileDialog(DesktopHost.frame, title, mode)
     fileName?.let { dialog.file = it }

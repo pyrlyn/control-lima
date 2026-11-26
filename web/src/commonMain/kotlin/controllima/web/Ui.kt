@@ -19,22 +19,23 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -43,24 +44,30 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.semantics.Role as SemanticsRole
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import controllima.shared.ApiException
@@ -80,24 +87,27 @@ import kotlinx.coroutines.launch
 @Composable
 fun PageHeader(title: String, subtitle: String? = null, actions: @Composable RowScope.() -> Unit = {}) {
     Row(Modifier.fillMaxWidth().padding(bottom = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-        Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.headlineSmall)
-            if (subtitle != null) Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Row(Modifier.weight(1f)) {
+            Text(title, Modifier.alignByBaseline(), style = MaterialTheme.typography.headlineSmall)
+            if (subtitle != null) {
+                Text(subtitle, Modifier.alignByBaseline().padding(start = 12.dp), style = MaterialTheme.typography.labelSmall, color = Lima.colors.textGhost)
+            }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically, content = actions)
     }
 }
 
+/** A labelled group: the label sits above a hairline-bordered card, as in the design. */
 @Composable
 fun Section(title: String, modifier: Modifier = Modifier, actions: @Composable RowScope.() -> Unit = {}, content: @Composable ColumnScope.() -> Unit) {
-    Card(modifier.fillMaxWidth().padding(bottom = 16.dp)) {
-        Column(Modifier.padding(16.dp)) {
-            Row(Modifier.fillMaxWidth().padding(bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(title, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), content = actions)
-            }
-            content()
+    val c = Lima.colors
+    val shape = RoundedCornerShape(Lima.radiusLg)
+    Column(modifier.fillMaxWidth().padding(bottom = 16.dp)) {
+        Row(Modifier.fillMaxWidth().padding(start = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(title.uppercase(), style = MaterialTheme.typography.labelMedium, color = c.textSecondary, modifier = Modifier.weight(1f))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically, content = actions)
         }
+        Column(Modifier.fillMaxWidth().background(c.card, shape).border(1.dp, c.hairline, shape).padding(12.dp), content = content)
     }
 }
 
@@ -108,7 +118,7 @@ fun Banner(text: String, kind: BannerKind = BannerKind.ERROR, action: Pair<Strin
     val (bg, fg, icon) = when (kind) {
         BannerKind.ERROR -> Triple(MaterialTheme.colorScheme.errorContainer, MaterialTheme.colorScheme.onErrorContainer, Glyph.CROSS)
         BannerKind.WARNING -> Triple(Palette.warningContainer, Palette.onWarningContainer, Glyph.TRIANGLE)
-        BannerKind.INFO -> Triple(MaterialTheme.colorScheme.secondaryContainer, MaterialTheme.colorScheme.onSecondaryContainer, Glyph.RING)
+        BannerKind.INFO -> Triple(MaterialTheme.colorScheme.primaryContainer, MaterialTheme.colorScheme.onPrimaryContainer, Glyph.RING)
     }
     Row(
         Modifier.fillMaxWidth().padding(bottom = 12.dp).background(bg, RoundedCornerShape(8.dp)).padding(horizontal = 12.dp, vertical = 8.dp),
@@ -143,18 +153,20 @@ fun Skeleton(rows: Int = 4) {
 fun Labeled(label: String, value: String?) {
     Row(Modifier.padding(vertical = 2.dp)) {
         Text(label, Modifier.width(160.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(value ?: "—", fontFamily = if (value != null && value.length > 30) FontFamily.Monospace else null)
+        Text(value ?: "—")
     }
 }
 
+/** The app font is already monospaced; this is the design's smaller code style. */
 @Composable
 fun Mono(text: String, modifier: Modifier = Modifier) {
-    Text(text, modifier, fontFamily = FontFamily.Monospace, fontSize = 13.sp)
+    Text(text, modifier, style = MaterialTheme.typography.bodySmall, color = Lima.colors.code)
 }
 
 @Composable
 fun CodeBlock(text: String, modifier: Modifier = Modifier) {
-    Box(modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(6.dp)).horizontalScroll(rememberScrollState()).padding(12.dp)) {
+    val shape = RoundedCornerShape(Lima.radiusMd)
+    Box(modifier.fillMaxWidth().background(Lima.colors.fill, shape).border(1.dp, Lima.colors.hairline, shape).horizontalScroll(rememberScrollState()).padding(12.dp)) {
         Mono(text)
     }
 }
@@ -165,7 +177,7 @@ fun CodeBlock(text: String, modifier: Modifier = Modifier) {
  * Status marks drawn as shapes: the browser font lacks symbols such as ⚠ and ●, and fetching a
  * fallback font from the internet is blocked by our CSP (and would leak usage to a third party).
  */
-enum class Glyph { DOT, RING, SQUARE, TRIANGLE, CROSS, BARS, DOWN, UP }
+enum class Glyph { DOT, RING, SQUARE, TRIANGLE, CROSS, BARS, DOWN, UP, SEARCH }
 
 @Composable
 fun GlyphIcon(glyph: Glyph, color: Color, size: androidx.compose.ui.unit.Dp = 10.dp) {
@@ -197,18 +209,36 @@ fun GlyphIcon(glyph: Glyph, color: Color, size: androidx.compose.ui.unit.Dp = 10
                 drawRect(color, topLeft = Offset(w * 0.15f, 0f), size = Size(w * 0.25f, w))
                 drawRect(color, topLeft = Offset(w * 0.6f, 0f), size = Size(w * 0.25f, w))
             }
+            Glyph.SEARCH -> {
+                drawCircle(color, radius = w * 0.3f, center = Offset(w * 0.42f, w * 0.42f), style = stroke)
+                drawLine(color, Offset(w * 0.65f, w * 0.65f), Offset(w * 0.95f, w * 0.95f), stroke.width)
+            }
         }
     }
 }
 
 /** A glyph followed by its text: state is never shown by color alone (docs/plan/i18n-accessibility.md). */
 @Composable
-fun Marked(glyph: Glyph, text: String, color: Color, modifier: Modifier = Modifier, fontWeight: FontWeight? = null) {
+fun Marked(
+    glyph: Glyph,
+    text: String,
+    color: Color,
+    modifier: Modifier = Modifier,
+    fontWeight: FontWeight? = null,
+    textColor: Color = color,
+    style: TextStyle = LocalTextStyle.current,
+    glyphSize: Dp = 10.dp,
+) {
     Row(modifier, verticalAlignment = Alignment.CenterVertically) {
-        GlyphIcon(glyph, color)
-        Text(text, color = color, fontWeight = fontWeight, modifier = Modifier.padding(start = 6.dp))
+        GlyphIcon(glyph, color, glyphSize)
+        Text(text, color = textColor, fontWeight = fontWeight, style = style, modifier = Modifier.padding(start = 6.dp))
     }
 }
+
+/** Entity states (VM, container) as in the design: a small coloured mark and a quiet label. */
+@Composable
+private fun StateMark(glyph: Glyph, text: String, color: Color) =
+    Marked(glyph, text, color, textColor = Lima.colors.textSecondary, style = MaterialTheme.typography.labelSmall, glyphSize = 7.dp)
 
 @Composable
 fun StatusBadge(status: VmStatus) {
@@ -224,7 +254,7 @@ fun StatusBadge(status: VmStatus) {
         VmStatus.BROKEN -> Glyph.CROSS
         VmStatus.UNRESPONSIVE, VmStatus.UNKNOWN -> Glyph.TRIANGLE
     }
-    Marked(glyph, Format.status(status), color, fontWeight = FontWeight.Medium)
+    StateMark(glyph, Format.status(status), color)
 }
 
 @Composable
@@ -236,82 +266,103 @@ fun ContainerState(state: String) {
         "paused" -> Glyph.BARS to Palette.warning
         else -> Glyph.RING to MaterialTheme.colorScheme.onSurfaceVariant
     }
-    Marked(glyph, state, color)
+    StateMark(glyph, state, color)
 }
 
 @Composable
-fun Tag(text: String, color: Color = MaterialTheme.colorScheme.secondaryContainer) {
+fun Tag(text: String, color: Color = Lima.colors.fillMedium) {
     Text(
         text,
-        Modifier.padding(start = 6.dp).background(color, RoundedCornerShape(4.dp)).padding(horizontal = 6.dp, vertical = 1.dp),
-        style = MaterialTheme.typography.labelSmall,
+        Modifier.padding(start = 6.dp).background(color, RoundedCornerShape(Lima.radiusSm)).padding(horizontal = 6.dp, vertical = 1.dp),
+        style = MaterialTheme.typography.labelMedium,
+        maxLines = 1,
+        softWrap = false,
     )
 }
 
-/** Horizontal usage bar for 0..100 %, with the number next to it. */
+/** Usage bar for 0..100 %, with the number above it as in the design; 90 % and more turns amber. */
 @Composable
 fun MiniBar(percent: Double?, modifier: Modifier = Modifier) {
-    Row(modifier, verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.width(48.dp).height(6.dp).background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(3.dp))) {
+    val c = Lima.colors
+    Column(modifier) {
+        Text(Format.percent(percent), style = MaterialTheme.typography.labelSmall, color = c.textSecondary)
+        Box(Modifier.padding(top = 3.dp).width(74.dp).height(3.dp).background(c.fillMedium, RoundedCornerShape(2.dp))) {
             if (percent != null) {
-                val color = if (percent >= 90) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
-                Box(Modifier.fillMaxWidth((percent / 100).toFloat().coerceIn(0f, 1f)).height(6.dp).background(color, RoundedCornerShape(3.dp)))
+                val color = if (percent >= 90) c.warning else c.accent
+                Box(Modifier.fillMaxWidth((percent / 100).toFloat().coerceIn(0f, 1f)).height(3.dp).background(color, RoundedCornerShape(2.dp)))
             }
         }
-        Text(Format.percent(percent), Modifier.padding(start = 6.dp), style = MaterialTheme.typography.labelSmall)
     }
 }
 
 // ---------- buttons with role checks ----------
 
-/** A button that is disabled, with the reason as its label suffix, when the role is too low. */
+enum class ButtonKind { PRIMARY, NEUTRAL, DANGER }
+
+/** The design's compact button; Material's minimum height of 40 dp is too tall for table rows. */
 @Composable
-fun RoleButton(m: AppModel, label: String, required: Role, enabled: Boolean = true, danger: Boolean = false, onClick: () -> Unit) {
-    val allowed = m.can(required)
-    val colors = if (danger) ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error) else ButtonDefaults.outlinedButtonColors()
-    OutlinedButton(onClick = onClick, enabled = allowed && enabled, colors = colors) {
-        Text(label)
+fun LimaButton(label: String, kind: ButtonKind = ButtonKind.NEUTRAL, enabled: Boolean = true, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    val c = Lima.colors
+    val shape = RoundedCornerShape(Lima.radiusMd)
+    val (bg, fg, edge) = when (kind) {
+        ButtonKind.PRIMARY -> Triple(c.accent, c.onAccent, Color.Transparent)
+        ButtonKind.NEUTRAL -> Triple(c.fillStrong, c.text, c.hairline)
+        ButtonKind.DANGER -> Triple(Color.Transparent, c.error, c.error.copy(alpha = 0.6f))
     }
+    Box(
+        modifier.alpha(if (enabled) 1f else 0.4f).clip(shape).background(bg).border(1.dp, edge, shape)
+            .clickable(enabled = enabled, role = SemanticsRole.Button, onClick = onClick)
+            .padding(horizontal = 10.dp, vertical = 5.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(label, style = MaterialTheme.typography.labelLarge, color = fg, maxLines = 1)
+    }
+}
+
+/** A button that is disabled when the role is too low. */
+@Composable
+fun RoleButton(m: AppModel, label: String, required: Role, enabled: Boolean = true, danger: Boolean = false, primary: Boolean = false, onClick: () -> Unit) {
+    val kind = if (danger) ButtonKind.DANGER else if (primary) ButtonKind.PRIMARY else ButtonKind.NEUTRAL
+    LimaButton(label, kind, m.can(required) && enabled, onClick = onClick)
 }
 
 @Composable
 fun SmallAction(label: String, enabled: Boolean = true, danger: Boolean = false, onClick: () -> Unit) {
-    TextButton(onClick = onClick, enabled = enabled) {
-        Text(label, color = if (!enabled) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f) else if (danger) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary)
-    }
+    LimaButton(label, if (danger) ButtonKind.DANGER else ButtonKind.NEUTRAL, enabled, Modifier.padding(end = 6.dp, top = 2.dp, bottom = 2.dp), onClick)
 }
 
 // ---------- tables ----------
 
 class Col(val title: String, val weight: Float, val sortKey: Any? = null)
 
+/** Column titles on a subtle band, in the design's caption caps. */
 @Composable
 fun TableHeader(cols: List<Col>, sort: Any? = null, descending: Boolean = false, onSort: (Any) -> Unit = {}) {
-    Row(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
+    val ghost = Lima.colors.textGhost
+    Row(Modifier.fillMaxWidth().background(Lima.colors.fillSubtle, RoundedCornerShape(Lima.radiusMd)).padding(horizontal = 4.dp, vertical = 7.dp)) {
         cols.forEach { c ->
             val mod = Modifier.weight(c.weight).padding(horizontal = 4.dp)
             Row(if (c.sortKey != null) mod.clickable { onSort(c.sortKey) } else mod, verticalAlignment = Alignment.CenterVertically) {
-                Text(c.title, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(c.title.uppercase(), style = MaterialTheme.typography.labelMedium, color = ghost, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 if (c.sortKey != null && c.sortKey == sort) {
                     Spacer(Modifier.width(4.dp))
-                    GlyphIcon(if (descending) Glyph.DOWN else Glyph.UP, MaterialTheme.colorScheme.onSurfaceVariant, 8.dp)
+                    GlyphIcon(if (descending) Glyph.DOWN else Glyph.UP, ghost, 8.dp)
                 }
             }
         }
     }
-    HorizontalDivider()
 }
 
 @Composable
 fun TableRow(onClick: (() -> Unit)? = null, dim: Boolean = false, highlight: Boolean = false, content: @Composable RowScope.() -> Unit) {
     val base = Modifier.fillMaxWidth().alpha(if (dim) 0.5f else 1f)
-    val bg = if (highlight) base.background(MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.4f)) else base
+    val bg = if (highlight) base.background(MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f)) else base
     Row(
-        (if (onClick != null) bg.clickable(onClick = onClick) else bg).padding(vertical = 4.dp),
+        (if (onClick != null) bg.clickable(onClick = onClick) else bg).padding(horizontal = 4.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
         content = content,
     )
-    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+    HorizontalDivider(color = Lima.colors.hairline)
 }
 
 @Composable
@@ -322,7 +373,11 @@ fun RowScope.Cell(weight: Float, content: @Composable () -> Unit) {
 @Composable
 fun RowScope.TextCell(weight: Float, text: String?, mono: Boolean = false) {
     Cell(weight) {
-        Text(text ?: "—", maxLines = 2, overflow = TextOverflow.Ellipsis, fontFamily = if (mono) FontFamily.Monospace else null, fontSize = if (mono) 13.sp else 14.sp)
+        Text(
+            text ?: "—", maxLines = 2, overflow = TextOverflow.Ellipsis,
+            style = if (mono) MaterialTheme.typography.bodySmall else MaterialTheme.typography.bodyMedium,
+            color = if (mono) Lima.colors.textSecondary else Color.Unspecified,
+        )
     }
 }
 
@@ -337,22 +392,48 @@ fun SearchField(value: String, onChange: (String) -> Unit, m: AppModel? = null, 
             onDispose { if (m.searchFocus === focus) m.searchFocus = null }
         }
     }
-    OutlinedTextField(
+    val c = Lima.colors
+    val shape = RoundedCornerShape(Lima.radiusMd)
+    val textStyle = MaterialTheme.typography.bodySmall
+    BasicTextField(
         value, onChange,
-        Modifier.width(260.dp).focusRequester(focus),
-        placeholder = { Text("$placeholder  (/)") },
+        Modifier.width(260.dp).focusRequester(focus).semantics { contentDescription = placeholder },
         singleLine = true,
+        textStyle = textStyle.copy(color = c.text),
+        cursorBrush = SolidColor(c.accentInk),
+        decorationBox = { inner ->
+            Row(
+                Modifier.background(c.fill, shape).border(1.dp, c.hairline, shape).padding(horizontal = 10.dp, vertical = 7.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                GlyphIcon(Glyph.SEARCH, c.textGhost, 11.dp)
+                Box(Modifier.weight(1f).padding(horizontal = 8.dp)) {
+                    if (value.isEmpty()) Text(placeholder, style = textStyle, color = c.textGhost, maxLines = 1)
+                    inner()
+                }
+                Text("/", style = textStyle, color = c.textGhost)
+            }
+        },
     )
 }
 
+/** A select drawn as the design's field: the label, the value and a chevron. */
 @Composable
 fun <T> Picker(label: String, options: List<T>, selected: T?, render: (T) -> String, onSelect: (T) -> Unit) {
     var open by remember { mutableStateOf(false) }
+    val c = Lima.colors
+    val shape = RoundedCornerShape(Lima.radiusMd)
     Box {
-        OutlinedButton(onClick = { open = true }) {
-            Text("$label: ${selected?.let(render) ?: "—"}")
-            Spacer(Modifier.width(6.dp))
-            GlyphIcon(Glyph.DOWN, MaterialTheme.colorScheme.primary, 8.dp)
+        Row(
+            Modifier.clip(shape).background(c.fill).border(1.dp, c.hairline, shape)
+                .clickable(role = SemanticsRole.DropdownList) { open = true }
+                .padding(horizontal = 10.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text("$label: ", style = MaterialTheme.typography.bodySmall, color = c.textGhost)
+            Text(selected?.let(render) ?: "—", style = MaterialTheme.typography.bodySmall)
+            Spacer(Modifier.width(8.dp))
+            GlyphIcon(Glyph.DOWN, c.textSecondary, 8.dp)
         }
         DropdownMenu(open, { open = false }) {
             options.forEach { o ->
@@ -367,24 +448,42 @@ fun <T> Picker(label: String, options: List<T>, selected: T?, render: (T) -> Str
 
 @Composable
 fun <T> ChipRow(options: List<T>, selected: T, render: (T) -> String, onSelect: (T) -> Unit) {
-    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        options.forEach { o -> FilterChip(selected = o == selected, onClick = { onSelect(o) }, label = { Text(render(o)) }) }
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        options.forEach { o -> LimaChip(render(o), o == selected) { onSelect(o) } }
+    }
+}
+
+/** The design's filter chip: the selected one is a filled pill, the rest are plain text. */
+@Composable
+fun LimaChip(text: String, selected: Boolean, enabled: Boolean = true, onClick: () -> Unit) {
+    val c = Lima.colors
+    Box(
+        Modifier.alpha(if (enabled) 1f else 0.4f).clip(RoundedCornerShape(Lima.radiusMd))
+            .background(if (selected) c.fillMedium else Color.Transparent)
+            .selectable(selected = selected, enabled = enabled, onClick = onClick)
+            .padding(horizontal = 10.dp, vertical = 5.dp),
+    ) {
+        Text(text, style = if (selected) MaterialTheme.typography.labelLarge else MaterialTheme.typography.bodySmall, color = if (selected) c.text else c.textSecondary)
     }
 }
 
 @Composable
 fun Tabs(titles: List<String>, selected: Int, onSelect: (Int) -> Unit) {
-    Row(Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
+    val c = Lima.colors
+    Row(Modifier.fillMaxWidth()) {
         titles.forEachIndexed { i, t ->
             val active = i == selected
-            Column(Modifier.clickable { onSelect(i) }.padding(horizontal = 12.dp, vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(t, color = if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = if (active) FontWeight.SemiBold else null)
-                Spacer(Modifier.height(4.dp))
-                Box(Modifier.width(32.dp).height(2.dp).background(if (active) MaterialTheme.colorScheme.primary else Color.Transparent))
+            Column(
+                Modifier.selectable(selected = active, role = SemanticsRole.Tab) { onSelect(i) }.padding(horizontal = 12.dp, vertical = 8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(t, color = if (active) c.text else c.textSecondary, fontWeight = if (active) FontWeight.Bold else null)
+                Spacer(Modifier.height(6.dp))
+                Box(Modifier.width(32.dp).height(2.dp).background(if (active) c.accent else Color.Transparent))
             }
         }
     }
-    HorizontalDivider(Modifier.padding(bottom = 12.dp))
+    HorizontalDivider(Modifier.padding(bottom = 12.dp), color = c.hairline)
 }
 
 // ---------- dialogs ----------
@@ -616,10 +715,10 @@ fun Sparkline(values: List<Double>, fixedMax: Double? = null, modifier: Modifier
 }
 
 object Palette {
-    val ok = Color(0xFF2E7D32)
-    val warning = Color(0xFFB26A00)
-    val warningContainer = Color(0xFFFFE9C2)
-    val onWarningContainer = Color(0xFF4A2C00)
+    val ok: Color @Composable @ReadOnlyComposable get() = Lima.colors.ok
+    val warning: Color @Composable @ReadOnlyComposable get() = Lima.colors.warning
+    val warningContainer: Color @Composable @ReadOnlyComposable get() = Lima.colors.warning.copy(alpha = 0.16f).compositeOver(Lima.colors.window)
+    val onWarningContainer: Color @Composable @ReadOnlyComposable get() = Lima.colors.warning
     private val series = listOf(Color(0xFF1E88E5), Color(0xFFD81B60), Color(0xFF43A047), Color(0xFFFB8C00), Color(0xFF8E24AA), Color(0xFF00897B))
     fun series(i: Int) = series[i % series.size]
 }

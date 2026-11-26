@@ -148,7 +148,7 @@ private fun ConfigEditor(m: AppModel, vm: Vm, original: String, onClose: () -> U
         OutlinedTextField(
             text,
             { text = it; validation = null },
-            textStyle = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 12.sp),
+            textStyle = TextStyle(fontFamily = MaterialTheme.typography.bodySmall.fontFamily, fontSize = 12.sp),
             modifier = Modifier.fillMaxWidth().heightIn(min = 320.dp).padding(vertical = 8.dp),
         )
         validation?.let { v ->

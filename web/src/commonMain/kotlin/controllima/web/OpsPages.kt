@@ -290,7 +290,7 @@ private fun RulesTab(m: AppModel) {
     var editing by remember { mutableStateOf<AlertRule?>(null) }
     var deleting by remember { mutableStateOf<AlertRule?>(null) }
     Row(Modifier.padding(bottom = 8.dp)) {
-        RoleButton(m, "New rule", Role.ADMIN) { editing = AlertRule("", "New rule", metric = Metric.CPU, threshold = 90.0, forSeconds = 300) }
+        RoleButton(m, "New rule", Role.ADMIN, primary = true) { editing = AlertRule("", "New rule", metric = Metric.CPU, threshold = 90.0, forSeconds = 300) }
     }
     val list = rules.value
     if (list == null) {

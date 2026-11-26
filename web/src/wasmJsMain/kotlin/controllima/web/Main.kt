@@ -32,6 +32,8 @@ actual fun pushHash(hash: String) = window.history.pushState(null, "", hash)
 
 actual fun reloadApp() = window.location.reload()
 
+actual fun serverHost(): String = window.location.host
+
 /**
  * The launch token moves from the URL to memory, and to sessionStorage so a reload of this tab keeps
  * working (docs/plan/auth.md allows it); it is removed from the address bar and history at once.

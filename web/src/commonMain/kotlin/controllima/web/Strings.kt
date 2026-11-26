@@ -44,6 +44,7 @@ object Strings {
     const val VERSION_MISMATCH = "The server was updated. Reload the page to load the matching UI."
     const val RELOAD = "Reload"
     const val SHORTCUTS = "Shortcuts: g o Overview · g v VMs · g c Containers · g i Images · g p Ports · g m Metrics · g a Alerts · g l Logs · g t Templates · g b Backups · g s Settings · / search"
+    const val SHORTCUT_HINT = "g + key to jump · / to search"
 
     const val NO_LIMA = "No Lima or Colima found"
     const val INSTALL_HINT = "Install them with Homebrew: brew install lima colima. Then start ControlLima again."

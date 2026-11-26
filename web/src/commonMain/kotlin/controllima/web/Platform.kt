@@ -10,6 +10,9 @@ expect fun pushHash(hash: String)
 /** Reloads the app after a server upgrade. */
 expect fun reloadApp()
 
+/** Where the server listens (`host:port`), shown under the app name. */
+expect fun serverHost(): String
+
 /** Saves text produced in the app (CSV export, log range) as a file. */
 expect fun saveText(text: String, fileName: String, mime: String = "text/plain")
 

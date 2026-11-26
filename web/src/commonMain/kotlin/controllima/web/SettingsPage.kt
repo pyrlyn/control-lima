@@ -134,7 +134,7 @@ private fun GeneralTab(m: AppModel, s: Settings, save: (Settings) -> Unit) {
         }
         if (webTerminal) Text("Admins can open a shell in any running VM from the browser. Sessions are audited.", style = MaterialTheme.typography.bodySmall)
     }
-    RoleButton(m, Strings.SAVE, Role.ADMIN, enabled = intsOk && homesOk && remoteHosts != null) {
+    RoleButton(m, Strings.SAVE, Role.ADMIN, enabled = intsOk && homesOk && remoteHosts != null, primary = true) {
         save(
             s.copy(
                 limaHomes = lines(homes), colimaProfiles = lines(profiles), defaultProfile = defaultProfile.trim().ifEmpty { "default" },
@@ -193,7 +193,7 @@ private fun MetricsDiskTab(m: AppModel, s: Settings, save: (Settings) -> Unit) {
             Field("15-minute, days", m15, admin, Modifier.width(150.dp)) { m15 = it }
             Field("1-hour, days", h1, admin, Modifier.width(150.dp)) { h1 = it }
         }
-        RoleButton(m, Strings.SAVE, Role.ADMIN, enabled = ok) {
+        RoleButton(m, Strings.SAVE, Role.ADMIN, enabled = ok, primary = true) {
             save(s.copy(retentionRawHours = values[0]!!, retention1mDays = values[1]!!, retention15mDays = values[2]!!, retention1hDays = values[3]!!))
         }
     }

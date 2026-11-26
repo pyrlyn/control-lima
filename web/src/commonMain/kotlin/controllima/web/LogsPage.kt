@@ -24,6 +24,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -183,12 +184,12 @@ private fun LogView(
     // The page itself scrolls, so the list needs a fixed height to stay virtualized.
     LazyColumn(state = state, modifier = Modifier.fillMaxWidth().height(if (embedded) 480.dp else 640.dp)) {
         itemsIndexed(shown) { _, l ->
-            val text = highlighted(l, query)
+            val text = highlighted(l, query, Palette.warningContainer)
             val base = Modifier.fillMaxWidth().padding(vertical = 1.dp)
             androidx.compose.material3.Text(
                 text,
                 if (wrap) base else base.horizontalScroll(rememberScrollState()),
-                fontFamily = FontFamily.Monospace,
+                fontFamily = MaterialTheme.typography.bodySmall.fontFamily,
                 fontSize = 12.sp,
                 softWrap = wrap,
                 color = when {
@@ -208,7 +209,7 @@ private fun append(lines: MutableList<LogLine>, more: List<LogLine>) {
     if (extra > 0) lines.subList(0, extra).clear()
 }
 
-private fun highlighted(l: LogLine, query: String): AnnotatedString = buildAnnotatedString {
+private fun highlighted(l: LogLine, query: String, mark: Color): AnnotatedString = buildAnnotatedString {
     l.ts?.let { append(Format.timestamp(it).drop(11) + "  ") }
     val text = l.line
     if (query.isBlank()) {
@@ -220,7 +221,7 @@ private fun highlighted(l: LogLine, query: String): AnnotatedString = buildAnnot
         val i = text.indexOf(query, from, ignoreCase = true)
         if (i < 0) break
         append(text.substring(from, i))
-        pushStyle(SpanStyle(background = Palette.warningContainer))
+        pushStyle(SpanStyle(background = mark))
         append(text.substring(i, i + query.length))
         pop()
         from = i + query.length

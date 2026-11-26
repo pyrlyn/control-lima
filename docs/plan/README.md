@@ -43,6 +43,7 @@ localhost only and wraps `limactl`, `colima` and the Docker Engine API.
 | [privacy-telemetry.md](privacy-telemetry.md) | telemetry off, local data only |
 | [testing.md](testing.md) | test strategy, fixtures, CI |
 | [risks.md](risks.md) | technical risks and mitigations |
+| [ui-restyle.md](ui-restyle.md) | bringing the web UI in line with the Figma design |
 | [../pages/README.md](../pages/README.md) | one doc per screen |
 
 ## Phases

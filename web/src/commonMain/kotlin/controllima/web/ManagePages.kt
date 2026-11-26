@@ -59,7 +59,7 @@ fun TemplatesPage(m: AppModel) {
     var importing by remember { mutableStateOf(false) }
     var deleting by remember { mutableStateOf<VmTemplate?>(null) }
     PageHeader(Page.Templates.title) {
-        RoleButton(m, "Save VM as template", Role.ADMIN) { saving = true }
+        RoleButton(m, "Save VM as template", Role.ADMIN, primary = true) { saving = true }
         TextButton(onClick = { importing = true }, enabled = m.can(Role.ADMIN)) { Text("Import YAML") }
     }
     val list = templates.value
@@ -258,7 +258,7 @@ private fun ImportTemplateDialog(m: AppModel, onDismiss: () -> Unit, onSaved: ()
         text = {
             Column {
                 OutlinedTextField(name, { name = it }, label = { Text("Template name") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(yaml, { yaml = it; checked = null }, label = { Text("lima.yaml") }, textStyle = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+                OutlinedTextField(yaml, { yaml = it; checked = null }, label = { Text("lima.yaml") }, textStyle = MaterialTheme.typography.bodySmall.copy(fontFamily = MaterialTheme.typography.bodySmall.fontFamily),
                     modifier = Modifier.fillMaxWidth().height(260.dp).padding(top = 8.dp))
                 checked?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
                 error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
@@ -300,7 +300,7 @@ fun BackupsPage(m: AppModel) {
     var restoring by remember { mutableStateOf<BackupInfo?>(null) }
     var deleting by remember { mutableStateOf<BackupInfo?>(null) }
     PageHeader(Page.Backups.title) {
-        RoleButton(m, "Back up now", Role.OPERATOR) { creating = true }
+        RoleButton(m, "Back up now", Role.OPERATOR, primary = true) { creating = true }
         TextButton(enabled = m.can(Role.ADMIN), onClick = {
             m.scope.launch {
                 val headers = try { m.api.writeHeaders() } catch (e: ApiException) { m.toast(e.message ?: "Upload failed"); return@launch }
@@ -373,7 +373,7 @@ private fun BackupSchedule(m: AppModel) {
             Text("scheduled backups")
             val days = everyDays.toIntOrNull()
             val k = keep.toIntOrNull()
-            RoleButton(m, Strings.SAVE, Role.ADMIN, enabled = days != null && days > 0 && k != null && k > 0) {
+            RoleButton(m, Strings.SAVE, Role.ADMIN, enabled = days != null && days > 0 && k != null && k > 0, primary = true) {
                 m.launchCall("Schedule saved", { m.api.saveSettings(s.copy(backupSchedule = s.backupSchedule.copy(enabled = enabled, everyDays = days!!, keep = k!!))) }) { settings.reload() }
             }
         }
@@ -528,7 +528,7 @@ private fun DiffView(d: BackupDiff) {
                     DiffKind.REMOVED -> "- " to MaterialTheme.colorScheme.error
                     DiffKind.SAME -> "  " to MaterialTheme.colorScheme.onSurfaceVariant
                 }
-                Text(prefix + l.text, fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = color)
+                Text(prefix + l.text, fontFamily = MaterialTheme.typography.bodySmall.fontFamily, fontSize = 12.sp, color = color)
             }
         }
     }

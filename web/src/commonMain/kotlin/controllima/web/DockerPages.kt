@@ -234,7 +234,7 @@ fun ImagesPage(m: AppModel) {
     val data = load(profile, everyMillis = 30_000) { m.api.images(profile) }
     PageHeader(Page.Images.title, data.value?.let { "${it.images.size} images · ${Format.bytes(it.totalBytes, m.units)} · reclaimable ${Format.bytes(it.reclaimableBytes, m.units)}" }) {
         ProfilePicker(m, profile, m.dockerProfiles()) { profile = it }
-        RoleButton(m, "Pull", Role.OPERATOR) { dialog = "pull" }
+        RoleButton(m, "Pull", Role.OPERATOR, primary = true) { dialog = "pull" }
         RoleButton(m, "Prune…", Role.ADMIN) {
             m.launchCall(null, { m.api.pruneImages(profile, dryRun = true) }) { prunePreview = it; dialog = "prune" }
         }

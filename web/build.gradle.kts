@@ -25,6 +25,7 @@ kotlin {
             api(libs.compose.foundation)
             api(libs.compose.ui)
             api(libs.compose.material3)
+            implementation(libs.compose.components.resources)
             implementation(libs.kotlinx.coroutines.core)
         }
     }
@@ -46,4 +47,11 @@ artifacts {
     add(webDistElements.name, layout.buildDirectory.dir("dist/wasmJs/productionExecutable")) {
         builtBy(tasks.named("wasmJsBrowserDistribution"))
     }
+}
+
+// IBM Plex Mono ships with the app: the browser must not fetch fonts from a third party (CSP), and the
+// desktop app should look the same.
+compose.resources {
+    packageOfResClass = "controllima.web.resources"
+    publicResClass = false
 }

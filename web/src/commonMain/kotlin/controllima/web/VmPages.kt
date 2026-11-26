@@ -24,6 +24,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import controllima.shared.AlertState
 import controllima.shared.ApiException
@@ -197,7 +198,7 @@ fun VmsPage(m: AppModel) {
 
     PageHeader(Page.Vms.title, list?.let { "${it.vms.size} VMs" }) {
         SearchField(query, { query = it }, m)
-        RoleButton(m, "New VM from template", Role.OPERATOR) { m.navigate(Screen.Main(Page.Templates)) }
+        RoleButton(m, "New VM from template", Role.OPERATOR, primary = true) { m.navigate(Screen.Main(Page.Templates)) }
     }
     Row(horizontalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.padding(bottom = 12.dp)) {
         ChipRow(listOf<VmSource?>(null) + VmSource.entries, source, { it?.slug?.replaceFirstChar(Char::uppercase) ?: "All sources" }) { source = it }
@@ -229,7 +230,7 @@ fun VmsPage(m: AppModel) {
             Cell(1.6f) { StatusBadge(vm.status) }
             Cell(2f) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(vm.name)
+                    Text(vm.name, Modifier.weight(1f, fill = false), fontWeight = FontWeight.Bold)
                     if (isProtected(m, vm)) Tag(Strings.PROTECTED)
                 }
             }
@@ -273,7 +274,7 @@ private fun RemoteHosts(m: AppModel) {
                     Cell(1.6f) { StatusBadge(vm.status) }
                     Cell(2f) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(vm.name)
+                            Text(vm.name, Modifier.weight(1f, fill = false), fontWeight = FontWeight.Bold)
                             if (vm.protected) Tag(Strings.PROTECTED)
                         }
                     }
