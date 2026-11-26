@@ -1,0 +1,43 @@
+# Merged by Colima and kubectl.
+apiVersion: v1
+clusters:
+  - cluster:
+      certificate-authority-data: Y29saW1hLWNh
+      server: https://127.0.0.1:6443
+    name: colima
+  - name: "colima-work"
+    cluster:
+      certificate-authority: ca/work-ca.crt   # relative to this file
+      server: 'https://127.0.0.1:16443'
+  - cluster:
+      insecure-skip-tls-verify: true
+      server: https://kubernetes.docker.internal:6443
+    name: docker-desktop
+contexts:
+- context:
+    cluster: colima
+    user: colima
+  name: colima
+- context:
+    cluster: colima-work
+    namespace: "team #1"
+    user: colima-work
+  name: colima-work
+- context:
+    cluster: docker-desktop
+    user: docker-desktop
+  name: docker-desktop
+current-context: colima
+kind: Config
+preferences: {}
+users:
+- name: colima
+  user:
+    client-certificate-data: Y29saW1hLWNsaWVudC1jZXJ0
+    client-key-data: Y29saW1hLWNsaWVudC1rZXk=
+- name: colima-work
+  user:
+    token: "abc\u0041"
+- name: docker-desktop
+  user:
+    token: ignored

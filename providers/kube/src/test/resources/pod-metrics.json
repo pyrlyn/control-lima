@@ -1,0 +1,4 @@
+{"kind":"PodMetricsList","apiVersion":"metrics.k8s.io/v1beta1","items":[
+ {"metadata":{"name":"web-5d9c","namespace":"default"},"containers":[
+  {"name":"app","usage":{"cpu":"2500000n","memory":"64Mi"}},{"name":"sidecar","usage":{"cpu":"1m","memory":"16Mi"}}]},
+ {"metadata":{"name":"coredns-7f496c8d7d-x2x9k","namespace":"kube-system"},"containers":[{"name":"coredns","usage":{"cpu":"3m","memory":"20Mi"}}]}]}

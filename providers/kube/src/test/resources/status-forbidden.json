@@ -1,0 +1,1 @@
+{"kind":"Status","apiVersion":"v1","metadata":{},"status":"Failure","message":"pods \"web-5d9c\" is forbidden: User \"system:anonymous\" cannot delete resource \"pods\" in namespace \"default\"","reason":"Forbidden","details":{"name":"web-5d9c","kind":"pods"},"code":403}

@@ -1,0 +1,2 @@
+{"kind":"NodeMetricsList","apiVersion":"metrics.k8s.io/v1beta1","items":[
+ {"metadata":{"name":"colima"},"timestamp":"2026-11-26T10:00:00Z","window":"10s","usage":{"cpu":"187654321n","memory":"1048576Ki"}}]}

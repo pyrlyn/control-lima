@@ -1,0 +1,2 @@
+{"kind":"NamespaceList","apiVersion":"v1","items":[
+ {"metadata":{"name":"kube-system"}},{"metadata":{"name":"default"}},{"metadata":{"name":"kube-public"}}]}
