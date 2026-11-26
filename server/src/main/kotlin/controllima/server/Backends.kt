@@ -11,6 +11,8 @@ import controllima.providers.lima.LimaProvider
 import controllima.providers.lima.LimactlProvider
 import controllima.providers.process.CommandRunner
 import controllima.shared.Settings
+import controllima.shared.Vm
+import controllima.shared.VmSource
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 
@@ -36,6 +38,9 @@ interface Backends {
     val runner: CommandRunner
 
     fun lima(home: String?): LimaProvider? = limaProviders().firstOrNull { it.home == home }
+
+    /** The Lima instance behind [vm]; Colima names its instances `colima[-<profile>]`. */
+    fun limaInstance(vm: Vm): String = if (vm.source == VmSource.COLIMA) colima().limaInstance(vm.name) else vm.name
 }
 
 class LocalBackends(

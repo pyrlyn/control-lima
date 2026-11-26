@@ -8,7 +8,6 @@ import controllima.providers.process.StreamHandle
 import controllima.shared.Settings
 import controllima.shared.StatsSample
 import controllima.shared.Vm
-import controllima.shared.VmSource
 import controllima.shared.VmStatus
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -125,10 +124,7 @@ class StatsCollector(
         }
     }
 
-    private fun instanceName(vm: Vm): String? = when (vm.source) {
-        VmSource.LIMA -> vm.name
-        VmSource.COLIMA -> runCatching { backends.colima().limaInstance(vm.name) }.getOrNull()
-    }
+    private fun instanceName(vm: Vm): String? = runCatching { backends.limaInstance(vm) }.getOrNull()
 
     private fun openVmStream(target: String, vm: Vm, cfg: String, instance: String, interval: Int): VmStream {
         val holder = VmStream(interval, clock())

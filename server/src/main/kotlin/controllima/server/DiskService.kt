@@ -11,7 +11,6 @@ import controllima.shared.DiskReport
 import controllima.shared.DockerDisk
 import controllima.shared.Targets
 import controllima.shared.VmDisk
-import controllima.shared.VmSource
 import controllima.shared.VmStatus
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -129,7 +128,7 @@ class DiskService(
                 if (vm.status != VmStatus.RUNNING) conflict("${vm.name} is not running")
                 confirm(vm.name)
                 if (dryRun) return@withContext CleanupResult(id, true, listOf("sudo fstrim -av in ${vm.name}"), 0)
-                val instance = if (vm.source == VmSource.COLIMA) backends.colima().limaInstance(vm.name) else vm.name
+                val instance = backends.limaInstance(vm)
                 val result = backends.guest.exec(vm.sshConfigFile ?: conflict("${vm.name} has no SSH config"), instance, "sudo -n fstrim -av", 5.minutes)
                 check(result.ok) { "fstrim failed (exit ${result.exitCode}); passwordless sudo is required" }
                 CleanupResult(id, false, result.stdout.lines().filter { it.isNotBlank() }, 0)

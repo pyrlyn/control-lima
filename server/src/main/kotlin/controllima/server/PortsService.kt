@@ -10,7 +10,6 @@ import controllima.shared.PortEntry
 import controllima.shared.PortOwnerKind
 import controllima.shared.PortsReport
 import controllima.shared.Vm
-import controllima.shared.VmSource
 import controllima.shared.VmStatus
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -44,7 +43,7 @@ class PortsService(
         val target = vm.ref.targetId
         guestIps[target]?.let { (at, ips) -> if (clock() - at < 60_000) return ips }
         val cfg = vm.sshConfigFile ?: return emptyList()
-        val instance = if (vm.source == VmSource.COLIMA) backends.colima().limaInstance(vm.name) else vm.name
+        val instance = backends.limaInstance(vm)
         val ips = withContext(Dispatchers.IO) { runCatching { backends.guest.ipAddresses(cfg, instance) }.getOrDefault(emptyList()) }
         guestIps[target] = clock() to ips
         return ips

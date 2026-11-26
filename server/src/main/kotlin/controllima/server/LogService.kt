@@ -122,7 +122,7 @@ class LogService(
             "journal", "cloud-init" -> {
                 val vm = vmOf(p.target)
                 val ssh = vm.sshConfigFile ?: throw IllegalStateException("VM has no SSH config")
-                val instance = limaInstance(vm)
+                val instance = backends.limaInstance(vm)
                 val remote = if (p.kind == "journal") "journalctl -o json --no-pager -n $n" else "sudo -n tail -n $n /var/log/cloud-init-output.log"
                 val result = backends.guest.exec(ssh, instance, remote, 15.seconds)
                 check(result.ok) { if (result.timedOut) "The guest did not answer in time" else "Reading the guest log failed (exit ${result.exitCode})" }
@@ -155,7 +155,7 @@ class LogService(
                 val vm = vmOf(p.target)
                 val ssh = vm.sshConfigFile ?: throw IllegalStateException("VM has no SSH config")
                 val remote = if (p.kind == "journal") "journalctl -o json --no-pager -f -n $n" else "sudo -n tail -n $n -F /var/log/cloud-init-output.log"
-                val stream = backends.runner.stream(backends.guest.command(ssh, limaInstance(vm), remote), emptyMap(),
+                val stream = backends.runner.stream(backends.guest.command(ssh, backends.limaInstance(vm), remote), emptyMap(),
                     onLine = { out.trySend(if (p.kind == "journal") journalLine(it) else LogLine(null, "stdout", it)) },
                     onExit = { out.close() })
                 Closeable { stream.close() }
@@ -179,8 +179,6 @@ class LogService(
         val k = kube ?: notFound("Kubernetes is not available")
         return k.podLogs(cluster, ns, pod, p.file, n.coerceIn(1, 10_000))
     }
-
-    private fun limaInstance(vm: Vm) = if (vm.source == VmSource.COLIMA) backends.colima().limaInstance(vm.name) else vm.name
 
     private fun dockerProvider(target: String) = Targets.parseContainer(target)?.let { (profile, id) ->
         (containers.docker(profile) ?: throw IllegalStateException("Docker is not available for profile $profile")) to id
