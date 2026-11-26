@@ -742,7 +742,8 @@ class StaticFiles(private val loader: ClassLoader = StaticFiles::class.java.clas
         val file = if ('.' in clean.substringAfterLast('/')) clean else "index.html"
         val bytes = loader.getResourceAsStream("web/$file")?.use { it.readBytes() } ?: return null
         val type = TYPES[file.substringAfterLast('.')] ?: "application/octet-stream"
-        return Response(200, bytes, type, mapOf("Cache-Control" to if (file.endsWith(".html")) "no-cache" else "max-age=3600"))
+        // Only the wasm files have content hashes in their names; anything else may change on upgrade.
+        return Response(200, bytes, type, mapOf("Cache-Control" to if (file.endsWith(".wasm")) "max-age=3600" else "no-cache"))
     }
 
     companion object {
