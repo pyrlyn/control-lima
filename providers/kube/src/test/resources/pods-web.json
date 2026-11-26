@@ -1,0 +1,10 @@
+{"kind":"PodList","apiVersion":"v1","items":[
+ {"metadata":{"name":"web-b","namespace":"default"},
+  "spec":{"containers":[{"name":"app","ports":[{"name":"http","containerPort":8080,"protocol":"TCP"}]}]},
+  "status":{"phase":"Running","containerStatuses":[{"name":"app","ready":true,"state":{"running":{}}}]}},
+ {"metadata":{"name":"web-a","namespace":"default"},
+  "spec":{"containers":[{"name":"app","ports":[{"name":"http","containerPort":8080,"protocol":"TCP"}]}]},
+  "status":{"phase":"Running","containerStatuses":[{"name":"app","ready":false,"state":{"waiting":{"reason":"CrashLoopBackOff"}}}]}},
+ {"metadata":{"name":"web-c","namespace":"default"},
+  "spec":{"containers":[{"name":"app","ports":[{"name":"http","containerPort":8080}]},{"name":"proxy","ports":[{"containerPort":9100}]}]},
+  "status":{"phase":"Running","containerStatuses":[{"name":"app","ready":true,"state":{"running":{}}},{"name":"proxy","ready":true,"state":{"running":{}}}]}}]}

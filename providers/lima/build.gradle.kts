@@ -10,6 +10,7 @@ dependencies {
     api(project(":providers:process"))
     implementation(libs.kotlinx.serialization.json)
     testImplementation(kotlin("test"))
+    testImplementation(testFixtures(project(":providers:process")))
 }
 
 tasks.test { useJUnitPlatform() }

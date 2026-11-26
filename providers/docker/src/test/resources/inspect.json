@@ -1,0 +1,7 @@
+{"Id":"8dfafdbc3a40aaaaaaaaaaaaaaaa","Name":"/sentry-web","Created":"2024-11-25T13:06:40.123456789Z","RestartCount":2,
+ "State":{"Status":"running","ExitCode":0,"StartedAt":"2024-11-25T13:06:41Z"},
+ "Config":{"Image":"getsentry/sentry:24.1.0","Cmd":["run","web"],"Entrypoint":["/entrypoint.sh"],"Env":["SENTRY_SECRET_KEY=abc","PATH=/usr/bin"],"Labels":{"a":"b"},"Tty":false},
+ "HostConfig":{"RestartPolicy":{"Name":"unless-stopped","MaximumRetryCount":0}},
+ "Mounts":[{"Type":"volume","Source":"/var/lib/docker/volumes/x/_data","Destination":"/data","RW":true}],
+ "NetworkSettings":{"Networks":{"bridge":{"IPAddress":"172.17.0.2"}},"Ports":{"9000/tcp":[{"HostIp":"0.0.0.0","HostPort":"9000"}],"9001/tcp":null}},
+ "SomethingNew":{"x":1}}

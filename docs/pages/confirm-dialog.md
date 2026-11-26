@@ -1,6 +1,6 @@
 # Confirm destructive action dialog
 
-Figma: TBD
+Figma: https://www.figma.com/design/QgRQevknzGb74dkcz4FfAN/ControlLima?node-id=1-620 (dark), https://www.figma.com/design/QgRQevknzGb74dkcz4FfAN/ControlLima?node-id=1-2651 (light)
 
 ## Purpose
 Shared dialog for delete, restore, prune and VM rename.
@@ -19,3 +19,6 @@ Confirm (enabled only when the typed text equals the name exactly), cancel (Esc)
 
 ## API
 Whatever the calling action uses; the body always carries `confirmName`.
+
+## Implementation
+`ConfirmDialog` in `web/.../Ui.kt`, shared by every destructive action. Confirm stays disabled until the typed text matches exactly (`Confirm.matches` from `shared/`); protected names show a blocking banner instead of the input. Esc closes the dialog.

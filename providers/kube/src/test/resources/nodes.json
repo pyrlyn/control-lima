@@ -1,0 +1,8 @@
+{"kind":"NodeList","apiVersion":"v1","metadata":{"resourceVersion":"1234"},"items":[
+ {"metadata":{"name":"colima","labels":{"kubernetes.io/hostname":"colima","node-role.kubernetes.io/control-plane":"true","node-role.kubernetes.io/master":"true"}},
+  "spec":{"podCIDR":"10.42.0.0/24"},
+  "status":{"capacity":{"cpu":"2","memory":"4005748Ki","pods":"110"},
+   "conditions":[{"type":"MemoryPressure","status":"False"},{"type":"Ready","status":"True","reason":"KubeletReady"}],
+   "addresses":[{"type":"InternalIP","address":"192.168.5.15"},{"type":"Hostname","address":"colima"}],
+   "nodeInfo":{"kubeletVersion":"v1.33.4+k3s1","osImage":"Ubuntu 24.04.2 LTS","architecture":"arm64"}}},
+ {"metadata":{"name":"worker"},"status":{"conditions":[{"type":"Ready","status":"Unknown"}],"nodeInfo":{"kubeletVersion":"v1.33.4+k3s1"}}}]}

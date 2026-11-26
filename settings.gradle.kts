@@ -22,6 +22,9 @@ include(
     ":providers:lima",
     ":providers:colima",
     ":providers:docker",
+    ":providers:kube",
+    ":providers:host",
     ":web",
     ":cli",
+    ":desktop",
 )

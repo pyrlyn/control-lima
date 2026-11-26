@@ -24,7 +24,15 @@ All endpoints are on `127.0.0.1:<port>`. JSON bodies use the models in `shared`.
 | DELETE | `/api/vms/{source}/{name}` | A | MVP | body `{"confirmName": "<name>"}`; 409 if protected |
 | POST | `/api/vms/{source}/{name}/rename` | A | v1 | body `{newName, confirmName}`; stopped VMs only |
 | POST | `/api/vms/{source}/{name}/clone` | A | v1 | where supported |
-| GET | `/api/containers?profile=` | V | MVP | containers of a Colima profile |
+| GET | `/api/containers?profile=` | V | MVP | containers of a Colima profile; v2: `lima:<vm>` lists nerdctl containers of a Lima VM |
+| GET | `/api/kube/clusters` | V | v2 | clusters found in kubeconfigs of Colima and Lima VMs |
+| GET | `/api/kube/clusters/{source}/{vm}` | V | v2 | nodes, namespaces, pods, services, metrics flag |
+| DELETE | `/api/kube/clusters/{source}/{vm}/pods/{ns}/{pod}` | A | v2 | `{confirmName}` = pod name; async action |
+| GET | `/api/kube/forwards` | V | v2.1 | running port forwards with connection and byte counts, last error |
+| POST | `/api/kube/clusters/{source}/{vm}/forwards` | O | v2.1 | body `{kind: POD\|SERVICE, namespace, name, port, localPort}`; `localPort` 0 = any free; 201 with the forward, 409 if the local port is busy |
+| DELETE | `/api/kube/forwards/{id}` | O | v2.1 | stop a forward and its open connections |
+| GET | `/api/remote-hosts` | V | v2 | `[{name, ssh, reachable, error, vms, checkedAtMillis}]`; read-only, cached 30 s |
+| GET | `/api/container-profiles` | V | v2 | Colima profiles, then `lima:<vm>` for running Lima VMs whose guest has nerdctl |
 | GET | `/api/containers/{id}` | V | MVP | inspect summary |
 | POST | `/api/containers/{id}/start` \| `/stop` \| `/restart` | O | MVP | |
 | POST | `/api/containers/{id}/rename` | O | MVP | `{newName}` |
@@ -54,6 +62,13 @@ All endpoints are on `127.0.0.1:<port>`. JSON bodies use the models in `shared`.
 | GET/POST/DELETE | `/api/tokens[/{id}]` | A | v1 | named tokens with roles |
 | GET/POST/DELETE | `/api/users[/{id}]` | A | v1 | optional multi-user |
 | GET | `/api/audit?from=&to=&actor=` | A | v1 | audit log |
+| GET | `/api/vms/{source}/{name}/snapshots` | V | v2 | `{supported, reason, tags}`; QEMU Lima VMs only |
+| POST | `/api/vms/{source}/{name}/snapshots` | O | v2 | `{tag}`; action |
+| POST | `/api/vms/{source}/{name}/snapshots/{tag}/apply` | A | v2 | `{confirmName: <vm>}`; action |
+| DELETE | `/api/vms/{source}/{name}/snapshots/{tag}` | A | v2 | `{confirmName: <tag>}`; action |
+| GET | `/api/vms/{source}/{name}/config` | A | v2 | unredacted `lima.yaml` and whether it can be edited now |
+| PUT | `/api/vms/{source}/{name}/config` | A | v2 | `{yaml, confirmName}`; stopped Lima VMs; validates, backs up, then writes |
+| POST | `/api/lima/validate` | O | v2 | `{yaml}` → `limactl validate` messages |
 
 ## WebSocket
 
@@ -61,6 +76,9 @@ All endpoints are on `127.0.0.1:<port>`. JSON bodies use the models in `shared`.
   Client may send `{"subscribe": [...]}` / `{"unsubscribe": [...]}`.
 - `/ws/events`: VM/container state changes, alert events, long-running action progress.
 - `/ws/logs?source=...&follow=true&since=`: log lines `{ts, stream, line}`.
+- `/ws/terminal?target=vm:<source>/<name>[@home]&rows=&cols=` (v2): raw terminal text both ways. Refused
+  with 403 unless `webTerminal` is on and the caller is admin; a stopped VM or a fifth session gets a
+  message in the stream and a close.
 
 ## Long-running actions
 

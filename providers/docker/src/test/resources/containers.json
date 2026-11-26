@@ -1,7 +1,7 @@
 [
-  {"Id":"8dfafdbc3a40aaaaaaaaaaaaaaaa","Names":["/sentry-web"],"Image":"getsentry/sentry:24.1.0","State":"running","Status":"Up 2 hours","Created":1732540000,
-   "Ports":[{"IP":"0.0.0.0","PrivatePort":9000,"PublicPort":9000,"Type":"tcp"},{"PrivatePort":9001,"Type":"tcp"}],
-   "NetworkSettings":{"Networks":{"bridge":{"IPAddress":"172.17.0.2"}}},"Labels":{}},
-  {"Id":"9cd87474be90bbbbbbbbbbbbbbbb","Names":["/redis"],"Image":"redis:7","State":"exited","Status":"Exited (0) 3 days ago","Created":1732000000,"Ports":[],
+  {"Id":"8dfafdbc3a40aaaaaaaaaaaaaaaa","Names":["/sentry-web"],"Image":"getsentry/sentry:24.1.0","ImageID":"sha256:aaa","State":"running","Status":"Up 2 hours","Created":1732540000,
+   "Ports":[{"IP":"0.0.0.0","PrivatePort":9000,"PublicPort":9000,"Type":"tcp"},{"IP":"::","PrivatePort":9000,"PublicPort":9000,"Type":"tcp"},{"PrivatePort":9001,"Type":"tcp"}],
+   "NetworkSettings":{"Networks":{"bridge":{"IPAddress":"172.17.0.2"}}},"Labels":{"com.docker.compose.project":"sentry"}},
+  {"Id":"9cd87474be90bbbbbbbbbbbbbbbb","Names":["/redis"],"Image":"redis:7","ImageID":"sha256:ddd","State":"exited","Status":"Exited (0) 3 days ago","Created":1732000000,"Ports":[],
    "NetworkSettings":{"Networks":{"bridge":{"IPAddress":""}}}}
 ]

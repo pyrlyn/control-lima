@@ -1,0 +1,4 @@
+{"read":"2024-11-25T13:06:42Z","cpu_stats":{"cpu_usage":{"total_usage":1500000000},"system_cpu_usage":102000000000,"online_cpus":4},
+ "memory_stats":{"usage":220200960,"limit":1073741824,"stats":{"inactive_file":10485760}},
+ "networks":{"eth0":{"rx_bytes":3000,"tx_bytes":2000},"eth1":{"rx_bytes":1000,"tx_bytes":0}},
+ "blkio_stats":{"io_service_bytes_recursive":[{"op":"Read","value":8192},{"op":"Write","value":8192}]}}

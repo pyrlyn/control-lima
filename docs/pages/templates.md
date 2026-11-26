@@ -1,6 +1,6 @@
 # Templates
 
-Figma: TBD
+Figma: https://www.figma.com/design/QgRQevknzGb74dkcz4FfAN/ControlLima?node-id=1-2019 (dark), https://www.figma.com/design/QgRQevknzGb74dkcz4FfAN/ControlLima?node-id=1-4050 (light)
 
 ## Purpose
 Create VMs from built-in or custom templates; manage custom templates.
@@ -19,3 +19,9 @@ Create VM (operator; VM created stopped, "Start now" offered), save VM as templa
 
 ## API
 `GET/POST/PUT/DELETE /api/templates`, `POST /api/templates/{id}/create-vm?dryRun=`.
+
+## Implementation
+`TemplatesPage` in `web/.../ManagePages.kt`. Create is a wizard: parameters, dry-run preview (command, YAML, warnings), then create stopped as a tracked action. Colima templates are preview-only. Import is a pasted `lima.yaml`; export downloads the template's YAML.
+
+v2: the import dialog has "Validate", which sends the YAML to `POST /api/lima/validate` (`limactl validate`)
+and shows Lima's messages before the template is saved.

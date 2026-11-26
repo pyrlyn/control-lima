@@ -1,0 +1,12 @@
+{"kind":"PodList","apiVersion":"v1","items":[
+ {"metadata":{"name":"coredns-7f496c8d7d-x2x9k","namespace":"kube-system","creationTimestamp":"2026-11-20T10:00:00Z"},
+  "spec":{"nodeName":"colima","containers":[{"name":"coredns","image":"rancher/mirrored-coredns-coredns:1.12.1"}]},
+  "status":{"phase":"Running","podIP":"10.42.0.3","containerStatuses":[{"name":"coredns","ready":true,"restartCount":2,"state":{"running":{"startedAt":"2026-11-20T10:00:05Z"}}}]}},
+ {"metadata":{"name":"web-5d9c","namespace":"default","creationTimestamp":"2026-11-25T08:30:00Z"},
+  "spec":{"nodeName":"colima","containers":[{"name":"app"},{"name":"sidecar"}]},
+  "status":{"phase":"Running","podIP":"10.42.0.9","containerStatuses":[
+   {"name":"app","ready":false,"restartCount":5,"state":{"waiting":{"reason":"CrashLoopBackOff"}}},
+   {"name":"sidecar","ready":true,"restartCount":1,"state":{"running":{}}}]}},
+ {"metadata":{"name":"old-job","namespace":"default","deletionTimestamp":"2026-11-26T09:00:00Z"},
+  "spec":{"containers":[{"name":"job"}]},"status":{"phase":"Succeeded"}},
+ {"metadata":{"name":"pending","namespace":"default"},"spec":{"containers":[{"name":"p"}]},"status":{"phase":"Pending"}}]}

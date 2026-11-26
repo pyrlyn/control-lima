@@ -1,0 +1,10 @@
+{
+    "version": "2.2.0",
+    "templates": [
+        {"name": "docker", "location": "/opt/homebrew/share/lima/templates/docker.yaml"},
+        {"name": "k3s", "location": "/opt/homebrew/share/lima/templates/k3s.yaml"},
+        {"name": "_images/ubuntu-24.04"}
+    ],
+    "defaultTemplate": {"vmType": "vz"},
+    "limaHome": "/Users/me/.lima"
+}

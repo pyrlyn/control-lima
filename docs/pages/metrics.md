@@ -1,6 +1,6 @@
 # Metrics
 
-Figma: TBD
+Figma: https://www.figma.com/design/QgRQevknzGb74dkcz4FfAN/ControlLima?node-id=1-1578 (dark), https://www.figma.com/design/QgRQevknzGb74dkcz4FfAN/ControlLima?node-id=1-3609 (light)
 
 ## Purpose
 Charts and history across VMs and containers; trends.
@@ -19,3 +19,6 @@ Change range/targets, zoom, export CSV, forget history for a target (admin).
 
 ## API
 `GET /api/metrics`, `GET /api/metrics/trends`, `WS /ws/stats`.
+
+## Implementation
+`MetricsPage` in `web/.../OpsPages.kt`: up to 6 targets, one metric, ranges 15 min to 30 d, chart or table, CSV export, trend cards, and an admin-only Forget history (`POST /api/metrics/forget`, typed confirmation).

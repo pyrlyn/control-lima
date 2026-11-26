@@ -4,15 +4,17 @@ Rules for coding agents and contributors working on ControlLima.
 
 ## Design
 
-<!-- FIGMA-PLACEHOLDER: replace this line with the real file URL once it exists. -->
-**Figma file: TBD (to be created)**
+**Figma file: https://www.figma.com/design/QgRQevknzGb74dkcz4FfAN/ControlLima** (page "ControlLima":
+"Screens · Dark" and "Screens · Light" sections, built from the Pyrlyn UI kit).
 
-Never invent Figma URLs. Until the file exists, every page doc says `Figma: TBD`.
+Never invent Figma URLs. A page without a frame yet says `Figma: TBD`. Colours, type and spacing in
+`web/src/commonMain/kotlin/controllima/web/Theme.kt` come from the file's variables; change them there
+when the file changes.
 
 ## Page docs (required)
 
 - Every page or screen of the web UI has a file `docs/pages/<page>.md`. The list is in
-  `docs/pages/README.md` and matches the `Page` enum in `web/src/wasmJsMain/kotlin/controllima/web/App.kt`.
+  `docs/pages/README.md` and matches the `Page` enum in `web/src/commonMain/kotlin/controllima/web/App.kt`.
 - Each page doc contains: purpose, data shown, actions, states (empty, loading, error, unresponsive),
   API endpoints used, and a `Figma:` line linking the exact frame or page
   (a URL with `node-id`, e.g. `https://www.figma.com/design/<fileKey>/ControlLima?node-id=12-345`).
