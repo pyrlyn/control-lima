@@ -43,10 +43,15 @@ data class KubePod(
     val node: String? = null,
     val podIp: String? = null,
     val containers: List<String> = emptyList(),
+    /** Ports the containers declare; a pod can still listen on others. */
+    val ports: List<KubeContainerPort> = emptyList(),
     val createdEpochSeconds: Long? = null,
     val cpuMillicores: Long? = null,
     val memoryBytes: Long? = null,
 )
+
+@Serializable
+data class KubeContainerPort(val name: String? = null, val containerPort: Int, val protocol: String = "TCP")
 
 @Serializable
 data class KubeServicePort(
@@ -65,6 +70,8 @@ data class KubeService(
     val type: String,
     val clusterIp: String? = null,
     val ports: List<KubeServicePort> = emptyList(),
+    /** Labels that pick the service's pods; empty for services without a selector. */
+    val selector: Map<String, String> = emptyMap(),
 )
 
 @Serializable
@@ -79,8 +86,61 @@ data class KubeOverview(
     val error: String? = null,
 )
 
+@Serializable
+enum class PortForwardKind { POD, SERVICE }
+
+/** Start a port forward; [localPort] 0 lets the server pick a free port. */
+@Serializable
+data class PortForwardRequest(
+    val kind: PortForwardKind,
+    val namespace: String,
+    val name: String,
+    /** The pod's port, or the service's port (which the server maps to its target port). */
+    val port: Int,
+    val localPort: Int = 0,
+) {
+    /** Null when the request is acceptable; the same check runs in the UI and on the server. */
+    fun problem(): String? = when {
+        port !in 1..65535 -> "Port must be between 1 and 65535"
+        localPort != 0 && localPort !in MIN_LOCAL_PORT..65535 -> "Local port must be empty or between $MIN_LOCAL_PORT and 65535"
+        else -> null
+    }
+
+    companion object {
+        /** Privileged ports would need root and would shadow system services. */
+        const val MIN_LOCAL_PORT = 1024
+    }
+}
+
+/** A running port forward on 127.0.0.1; it lives as long as the server process. */
+@Serializable
+data class KubePortForward(
+    val id: String,
+    val clusterId: String,
+    val kind: PortForwardKind,
+    val namespace: String,
+    val name: String,
+    val port: Int,
+    val localPort: Int,
+    val startedBy: String,
+    val startedAtMillis: Long,
+    val activeConnections: Int = 0,
+    val totalConnections: Long = 0,
+    /** Bytes sent to the cluster and received from it. */
+    val bytesOut: Long = 0,
+    val bytesIn: Long = 0,
+    /** The most recent connection failure, e.g. the pod refusing the port. */
+    val lastError: String? = null,
+) {
+    val label get() = "${kind.name.lowercase()}/$namespace/$name:$port"
+}
+
 object KubeRoutes {
     const val CLUSTERS = "/api/kube/clusters"
+    const val FORWARDS = "/api/kube/forwards"
+
+    fun forwards(clusterId: String) = "${cluster(clusterId)}/forwards"
+    fun forward(id: String) = "$FORWARDS/${ApiRoutes.encode(id)}"
 
     /** Cluster ids are `<source>/<vm>`, which maps onto two path segments. */
     fun cluster(id: String) = "$CLUSTERS/${id.split('/').joinToString("/") { ApiRoutes.encode(it) }}"

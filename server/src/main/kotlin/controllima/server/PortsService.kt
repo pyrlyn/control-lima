@@ -4,6 +4,7 @@ import controllima.shared.Container
 import controllima.shared.HostListener
 import controllima.shared.IpEntry
 import controllima.shared.KubeCluster
+import controllima.shared.KubePortForward
 import controllima.shared.KubeService
 import controllima.shared.NetworkInfo
 import controllima.shared.PortEntry
@@ -23,6 +24,7 @@ class PortsService(
     private val containers: ContainerInventory,
     private val clock: () -> Long = System::currentTimeMillis,
     private val kube: KubernetesService? = null,
+    private val forwards: () -> List<KubePortForward> = { emptyList() },
 ) {
     @Volatile private var listenersCache: Triple<Long, List<HostListener>, String?>? = null
     private val guestIps = ConcurrentHashMap<String, Pair<Long, List<String>>>()
@@ -56,7 +58,11 @@ class PortsService(
         val (listeners, lsofWarning) = listeners()
         val warnings = listOfNotNull(lsofWarning) + lists.filter { it.unavailable }.map { "Containers of profile ${it.profile}: ${it.error}" }
         val services = runCatching { kube?.nodePortServices() }.getOrNull().orEmpty()
-        val ports = build(vms, allContainers, listeners) + nodePorts(services)
+        val active = forwards()
+        val forwarded = active.map { it.localPort }.toSet()
+        // A forward's listener is this process; its own row says more than "java (pid)".
+        val ports = build(vms, allContainers, listeners.filterNot { it.port in forwarded && it.hostIp == "127.0.0.1" }) +
+            nodePorts(services) + forwardPorts(active)
         val ips = vms.map { vm ->
             IpEntry(vm.name, vm.ref.targetId, (vm.ipAddresses + guestIps(vm)).distinct())
         } + allContainers.filter { it.ipAddresses.isNotEmpty() }.map { IpEntry(it.name, it.targetId, it.ipAddresses) }
@@ -122,6 +128,12 @@ class PortsService(
                     "${svc.namespace}/${svc.name} (${cluster.label})", "kube:${cluster.id}", svc.type)
             }
         }.sortedBy { it.hostPort }
+
+        fun forwardPorts(forwards: List<KubePortForward>): List<PortEntry> = forwards.map { f ->
+            PortEntry("127.0.0.1", f.localPort, "tcp", f.port, PortOwnerKind.FORWARD,
+                "${f.kind.name.lowercase()} ${f.namespace}/${f.name} (${f.clusterId})", "kube:${f.clusterId}",
+                "forwarding, ${f.activeConnections} open")
+        }
 
         private fun overlaps(a: String, b: String): Boolean {
             val any = setOf("*", "0.0.0.0", "::", "")

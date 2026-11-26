@@ -58,6 +58,10 @@ class ApiClient(private val transport: HttpTransport, var token: String) {
     suspend fun kubeOverview(clusterId: String): KubeOverview = get(KubeRoutes.cluster(clusterId))
     suspend fun deletePod(clusterId: String, namespace: String, pod: String, confirmName: String): ActionAccepted =
         send("DELETE", KubeRoutes.pod(clusterId, namespace, pod), encode(ConfirmRequest.serializer(), ConfirmRequest(confirmName)))
+    suspend fun portForwards(): List<KubePortForward> = get(KubeRoutes.FORWARDS)
+    suspend fun startPortForward(clusterId: String, request: PortForwardRequest): KubePortForward =
+        send("POST", KubeRoutes.forwards(clusterId), encode(PortForwardRequest.serializer(), request))
+    suspend fun stopPortForward(id: String) = sendUnit("DELETE", KubeRoutes.forward(id), null)
     suspend fun saveVmConfig(ref: VmRef, yaml: String, confirmName: String): SaveConfigResult =
         send("PUT", VmEditRoutes.config(ref), encode(SaveConfigRequest.serializer(), SaveConfigRequest(yaml, confirmName)))
     suspend fun validateLimaYaml(yaml: String): ValidationResult =

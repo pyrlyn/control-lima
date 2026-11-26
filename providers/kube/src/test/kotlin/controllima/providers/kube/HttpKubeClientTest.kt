@@ -25,6 +25,13 @@ class HttpKubeClientTest {
             return routes["DELETE $path"] ?: KubeResponse(200, "{}")
         }
 
+        val forwards = mutableListOf<String>()
+
+        override suspend fun portForward(path: String): KubePortStream {
+            forwards += path
+            throw KubeException("no cluster in tests")
+        }
+
         override fun close() { closed = true }
     }
 
@@ -143,5 +150,47 @@ class HttpKubeClientTest {
         val http = FakeHttp(emptyMap())
         HttpKubeClient(http).close()
         assertTrue(http.closed)
+    }
+
+    private val webService = mapOf(
+        "/api/v1/namespaces/default/services/web" to ok("service-web.json"),
+        "/api/v1/namespaces/default/pods?labelSelector=app%3Dweb%2Ctier%3Dfront" to ok("pods-web.json"),
+    )
+
+    @Test
+    fun `service ports lead to a ready pod and its target port`() {
+        val client = HttpKubeClient(FakeHttp(webService))
+        // web-a sorts first but is not ready.
+        assertEquals("web-b" to 8080, client.serviceBackend("default", "web", 80))
+        assertEquals("web-b" to 9100, client.serviceBackend("default", "web", 9090))
+        assertEquals("web-b" to 8443, client.serviceBackend("default", "web", 8443))
+    }
+
+    @Test
+    fun `service forwards refuse UDP, unknown ports and services without pods`() {
+        val client = HttpKubeClient(FakeHttp(webService))
+        assertTrue(assertFailsWith<KubeException> { client.serviceBackend("default", "web", 53) }.message!!.contains("no TCP port 53"))
+        assertFailsWith<KubeException> { client.serviceBackend("default", "web", 1234) }
+        assertFailsWith<KubeException> { client.serviceBackend("default", "../x", 80) }
+        val noPods = HttpKubeClient(FakeHttp(webService + ("/api/v1/namespaces/default/pods?labelSelector=app%3Dweb%2Ctier%3Dfront" to KubeResponse(200, """{"items":[]}"""))))
+        assertTrue(assertFailsWith<KubeException> { noPods.serviceBackend("default", "web", 80) }.message!!.contains("no running, ready pod"))
+    }
+
+    @Test
+    fun `pod port forward uses the portforward subresource`() {
+        val http = FakeHttp(emptyMap())
+        val client = HttpKubeClient(http)
+        assertFailsWith<KubeException> { kotlinx.coroutines.runBlocking { client.portForward("default", "web-b", 8080) } }
+        assertFailsWith<KubeException> { kotlinx.coroutines.runBlocking { client.portForward("default", "web-b", 70000) } }
+        assertFailsWith<KubeException> { kotlinx.coroutines.runBlocking { client.portForward("default", "Bad_Pod", 80) } }
+        assertEquals(listOf("/api/v1/namespaces/default/pods/web-b/portforward?ports=8080"), http.forwards)
+    }
+
+    @Test
+    fun `pods carry their declared container ports`() {
+        val pod = KubeJson.pods(fixture("pods-web.json")).single { it.name == "web-c" }
+        assertEquals(listOf(8080, 9100), pod.ports.map { it.containerPort })
+        assertEquals("http", pod.ports[0].name)
+        assertEquals(mapOf("app" to "web", "tier" to "front"), KubeJson.service(fixture("service-web.json")).selector)
     }
 }

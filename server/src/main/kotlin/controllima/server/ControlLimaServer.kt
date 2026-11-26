@@ -68,7 +68,8 @@ class ControlLimaServer(
         val containers = ContainerInventory(backends, events, nerdctl = NerdctlProfiles(backends, { inventory.snapshot.value.vms }))
         val stats = StatsCollector(backends, inventory, containers, { settings.current })
         val kube = KubernetesService(File(homeDir).toPath(), { inventory.snapshot.value.vms })
-        val ports = PortsService(backends, inventory, containers, kube = kube)
+        val forwards = PortForwardService(kube)
+        val ports = PortsService(backends, inventory, containers, kube = kube, forwards = forwards::list)
         val retention = { settings.current.let { Retention(it.retentionRawHours, it.retention1mDays, it.retention15mDays, it.retention1hDays) } }
         // The file store keeps history working when the SQLite native library cannot load on this machine.
         val metrics: MetricsStore = runCatching { SqliteMetricsStore(paths.metricsDb, retention) }.getOrElse { e ->
@@ -88,6 +89,7 @@ class ControlLimaServer(
             metrics, alerts, channels, notifier, logs, backups, templates, disk, about, VmEditService(paths, backends, backups), kube,
             TerminalService(backends, inventory, audit, { settings.current }),
             RemoteHostsService(runner, { settings.current }),
+            forwards,
         )
         server = KtorHttpServer(config.host, config.port, Api(services))
     }
@@ -170,6 +172,7 @@ class ControlLimaServer(
         services.stats.stop()
         scope.cancel()
         services.metrics.close()
+        services.forwards.close()
         services.kube.close()
         http.close()
     }

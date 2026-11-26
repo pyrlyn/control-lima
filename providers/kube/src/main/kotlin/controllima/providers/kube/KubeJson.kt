@@ -1,5 +1,6 @@
 package controllima.providers.kube
 
+import controllima.shared.KubeContainerPort
 import controllima.shared.KubeNode
 import controllima.shared.KubePod
 import controllima.shared.KubeService
@@ -21,10 +22,7 @@ data class KubeUsage(val cpuMillicores: Long?, val memoryBytes: Long?)
 object KubeJson {
     private val json = Json { ignoreUnknownKeys = true }
 
-    private fun items(body: String): List<JsonObject> {
-        val root = runCatching { json.parseToJsonElement(body) as JsonObject }.getOrElse { throw KubeException("unexpected API response") }
-        return (root["items"] as? JsonArray).orEmpty().filterIsInstance<JsonObject>()
-    }
+    private fun items(body: String): List<JsonObject> = (root(body)["items"] as? JsonArray).orEmpty().filterIsInstance<JsonObject>()
 
     private fun JsonElement?.obj(key: String): JsonObject? = (this as? JsonObject)?.get(key) as? JsonObject
     private fun JsonElement?.arr(key: String): List<JsonObject> = ((this as? JsonObject)?.get(key) as? JsonArray).orEmpty().filterIsInstance<JsonObject>()
@@ -51,13 +49,21 @@ object KubeJson {
         )
     }
 
-    fun pods(body: String): List<KubePod> = items(body).map { item ->
+    private fun root(body: String): JsonObject =
+        runCatching { json.parseToJsonElement(body) as JsonObject }.getOrElse { throw KubeException("unexpected API response") }
+
+    fun pods(body: String): List<KubePod> = items(body).map(::pod)
+
+    /** One `GET .../pods/{name}` answer. */
+    fun pod(body: String): KubePod = pod(root(body))
+
+    private fun pod(item: JsonObject): KubePod {
         val meta = item.obj("metadata")
         val spec = item.obj("spec")
         val status = item.obj("status")
         val containers = spec.arr("containers").mapNotNull { it.str("name") }
         val statuses = status.arr("containerStatuses")
-        KubePod(
+        return KubePod(
             namespace = meta.str("namespace").orEmpty(),
             name = meta.str("name").orEmpty(),
             phase = podStatus(meta, status, statuses),
@@ -66,6 +72,9 @@ object KubeJson {
             node = spec.str("nodeName"),
             podIp = status.str("podIP"),
             containers = containers,
+            ports = spec.arr("containers").flatMap { c -> c.arr("ports") }.mapNotNull { p ->
+                KubeContainerPort(p.str("name"), p.int("containerPort") ?: return@mapNotNull null, p.str("protocol") ?: "TCP")
+            },
             createdEpochSeconds = epochSeconds(meta.str("creationTimestamp")),
         )
     }
@@ -78,10 +87,15 @@ object KubeJson {
         return status.str("phase") ?: "Unknown"
     }
 
-    fun services(body: String): List<KubeService> = items(body).map { item ->
+    fun services(body: String): List<KubeService> = items(body).map(::service)
+
+    /** One `GET .../services/{name}` answer. */
+    fun service(body: String): KubeService = service(root(body))
+
+    private fun service(item: JsonObject): KubeService {
         val meta = item.obj("metadata")
         val spec = item.obj("spec")
-        KubeService(
+        return KubeService(
             namespace = meta.str("namespace").orEmpty(),
             name = meta.str("name").orEmpty(),
             type = spec.str("type") ?: "ClusterIP",
@@ -95,6 +109,7 @@ object KubeJson {
                     protocol = p.str("protocol") ?: "TCP",
                 )
             },
+            selector = spec.obj("selector")?.mapNotNull { (k, v) -> (v as? JsonPrimitive)?.contentOrNull?.let { k to it } }?.toMap().orEmpty(),
         )
     }
 

@@ -10,6 +10,10 @@ import controllima.server.metrics.SqliteMetricsStore
 import controllima.server.metrics.TieredMetricsStore
 import controllima.providers.host.SecretStore
 import controllima.providers.kube.KubeClient
+import controllima.providers.kube.KubeException
+import controllima.providers.kube.KubePortStream
+import controllima.shared.PortForwardKind
+import controllima.shared.PortForwardRequest
 import controllima.shared.KubeNode
 import controllima.shared.KubePod
 import controllima.shared.KubeService
@@ -28,6 +32,7 @@ import kotlinx.coroutines.runBlocking
 import java.nio.file.Files
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
@@ -72,6 +77,12 @@ class ServicesTest {
             override fun metricsAvailable() = false
             override fun deletePod(namespace: String, name: String) { calls += "delete $namespace/$name" }
             override fun podLogs(namespace: String, name: String, container: String?, tailLines: Int) = listOf(LogLine(null, "stdout", "hi"))
+            override fun pod(namespace: String, name: String) = KubePod(namespace, name, if (name == "web-1") "Running" else "Pending", "1/1")
+            override fun serviceBackend(namespace: String, service: String, servicePort: Int) = "web-1" to 8080
+            override suspend fun portForward(namespace: String, pod: String, port: Int): KubePortStream {
+                calls += "forward $namespace/$pod:$port"
+                throw KubeException("no cluster in tests")
+            }
             override fun close() {}
         }
         var status = VmStatus.STOPPED
@@ -95,6 +106,14 @@ class ServicesTest {
         assertEquals("kube:lima/dev", ports.single().ownerTarget)
         kube.deletePod("lima/dev", "default", "web-1")
         assertEquals(listOf("connect https://127.0.0.1:6443", "delete default/web-1"), calls)
+
+        val pending = PortForwardRequest(PortForwardKind.POD, "default", "job-1", 80)
+        assertTrue(assertFailsWith<IllegalStateException> { kube.check("lima/dev", pending) }.message!!.contains("Pending"))
+        kube.check("lima/dev", PortForwardRequest(PortForwardKind.SERVICE, "default", "web", 80))
+        assertFailsWith<KubeException> { kube.open("lima/dev", PortForwardRequest(PortForwardKind.SERVICE, "default", "web", 80)) }
+        assertFailsWith<KubeException> { kube.open("lima/dev", PortForwardRequest(PortForwardKind.POD, "default", "web-1", 9000)) }
+        // A service is forwarded to the pod and target port behind it.
+        assertEquals(listOf("forward default/web-1:8080", "forward default/web-1:9000"), calls.drop(2))
         home.toFile().deleteRecursively()
     }
     private val dir = Files.createTempDirectory("cl-svc").toFile()

@@ -206,6 +206,25 @@ class ApiTest {
     }
 
     @Test
+    fun `port forwards need the operator role and a valid target`() {
+        val viewer = namedToken(Role.VIEWER)
+        val operator = namedToken(Role.OPERATOR)
+        val path = "/api/kube/clusters/colima/default/forwards"
+        val body = """{"kind":"POD","namespace":"default","name":"web-1","port":8080}"""
+        assertEquals("[]", call("GET", "/api/kube/forwards", auth = viewer).body)
+        assertEquals(403, call("POST", path, body, auth = viewer).status)
+        assertEquals(400, call("POST", path, body.replace("web-1", "Web_1"), auth = operator).status)
+        assertEquals(400, call("POST", path, body.replace("8080", "80,\"localPort\":80"), auth = operator).status)
+        assertEquals(400, call("POST", "/api/kube/clusters/k8s/default/forwards", body, auth = operator).status)
+        // No cluster runs in tests, so nothing is listening afterwards.
+        assertEquals(404, call("POST", path, body, auth = operator).status)
+        assertEquals(403, call("DELETE", "/api/kube/forwards/1", auth = viewer).status)
+        assertEquals(404, call("DELETE", "/api/kube/forwards/1", auth = operator).status)
+        assertEquals(400, call("DELETE", "/api/kube/forwards/x1", auth = operator).status)
+        assertEquals("[]", call("GET", "/api/kube/forwards", auth = viewer).body)
+    }
+
+    @Test
     fun `state conflicts answer 409`() {
         assertEquals(409, call("POST", "${ApiRoutes.VMS}/lima/infra-test/start").status)
         assertEquals(409, call("POST", "${ApiRoutes.VMS}/lima/tc-dev-1/stop").status)

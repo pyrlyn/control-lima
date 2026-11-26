@@ -22,6 +22,7 @@ object Strings {
     const val LOGS = "Logs"
     const val OPEN = "Open"
     const val COPY = "Copy"
+    const val FORWARD = "Forward"
     const val SEARCH = "Search"
     const val PROTECTED = "Protected"
     const val PROTECTED_HINT = "Protected names can never be deleted (Settings > Protected names)."

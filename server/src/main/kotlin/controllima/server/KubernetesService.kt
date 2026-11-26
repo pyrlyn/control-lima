@@ -5,11 +5,14 @@ import controllima.providers.kube.KtorKubeHttp
 import controllima.providers.kube.KubeAccess
 import controllima.providers.kube.KubeClient
 import controllima.providers.kube.KubeDiscovery
+import controllima.providers.kube.KubePortStream
 import controllima.providers.kube.KubeTarget
 import controllima.shared.KubeCluster
 import controllima.shared.KubeOverview
 import controllima.shared.KubeService
 import controllima.shared.LogLine
+import controllima.shared.PortForwardKind
+import controllima.shared.PortForwardRequest
 import controllima.shared.Vm
 import controllima.shared.VmSource
 import controllima.shared.VmStatus
@@ -30,7 +33,7 @@ class KubernetesService(
     private val vms: () -> List<Vm>,
     private val clientFactory: (KubeAccess) -> KubeClient = { HttpKubeClient(KtorKubeHttp(it)) },
     private val clock: () -> Long = System::currentTimeMillis,
-) : AutoCloseable {
+) : PortForwardBackend, AutoCloseable {
     private val clients = ConcurrentHashMap<String, Pair<String, KubeClient>>()
     private val overviews = ConcurrentHashMap<String, Pair<Long, KubeOverview>>()
 
@@ -62,6 +65,28 @@ class KubernetesService(
         val target = availableTarget(id)
         withContext(Dispatchers.IO) { client(target).deletePod(namespace, pod) }
         overviews.remove(id)
+    }
+
+    override suspend fun check(clusterId: String, request: PortForwardRequest) {
+        val target = availableTarget(clusterId)
+        withContext(Dispatchers.IO) {
+            val client = client(target)
+            when (request.kind) {
+                PortForwardKind.POD -> client.pod(request.namespace, request.name).let { p ->
+                    if (p.phase != "Running") throw IllegalStateException("Pod ${request.namespace}/${request.name} is ${p.phase}, not Running")
+                }
+                PortForwardKind.SERVICE -> client.serviceBackend(request.namespace, request.name, request.port)
+            }
+        }
+    }
+
+    override suspend fun open(clusterId: String, request: PortForwardRequest): KubePortStream {
+        val client = client(availableTarget(clusterId))
+        val (pod, port) = when (request.kind) {
+            PortForwardKind.POD -> request.name to request.port
+            PortForwardKind.SERVICE -> withContext(Dispatchers.IO) { client.serviceBackend(request.namespace, request.name, request.port) }
+        }
+        return client.portForward(request.namespace, pod, port)
     }
 
     /** Containers of a pod from the last overview, for log sources; empty when the cluster was never read. */

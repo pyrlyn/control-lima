@@ -6,6 +6,7 @@ import controllima.shared.KubeOverview
 import controllima.shared.KubePod
 import controllima.shared.KubeService
 import controllima.shared.LogLine
+import java.net.URLEncoder
 import java.time.Instant
 
 data class KubeResponse(val status: Int, val body: String)
@@ -14,6 +15,8 @@ data class KubeResponse(val status: Int, val body: String)
 interface KubeHttp : AutoCloseable {
     fun get(path: String): KubeResponse
     fun delete(path: String): KubeResponse
+    /** Opens a `pods/portforward` WebSocket; [path] includes the `?ports=` query. */
+    suspend fun portForward(path: String): KubePortStream
     override fun close()
 }
 
@@ -30,6 +33,13 @@ interface KubeClient : AutoCloseable {
     /** The owning controller recreates the pod, which is how a pod is restarted. */
     fun deletePod(namespace: String, name: String)
     fun podLogs(namespace: String, name: String, container: String? = null, tailLines: Int = 200): List<LogLine>
+    fun pod(namespace: String, name: String): KubePod
+    /**
+     * The pod and pod port that [servicePort] of a service leads to, chosen the way
+     * `kubectl port-forward svc/...` does: a running, ready pod behind the selector and the port's target.
+     */
+    fun serviceBackend(namespace: String, service: String, servicePort: Int): Pair<String, Int>
+    suspend fun portForward(namespace: String, pod: String, port: Int): KubePortStream
     override fun close()
 
     /** Everything the cluster page shows; a failure becomes [KubeOverview.error] instead of an exception. */
@@ -77,7 +87,40 @@ class HttpKubeClient(private val http: KubeHttp) : KubeClient {
         return getOk("${podPath(namespace, name)}/log$query").lineSequence().filter { it.isNotEmpty() }.map(::logLine).toList()
     }
 
+    override fun pod(namespace: String, name: String): KubePod = KubeJson.pod(getOk(podPath(namespace, name)))
+
+    override fun serviceBackend(namespace: String, service: String, servicePort: Int): Pair<String, Int> {
+        val ns = KubeNames.namespace(namespace)
+        if (!KubeNames.isLabel(service)) throw KubeException("invalid service name: $service")
+        val svc = KubeJson.service(getOk("/api/v1/namespaces/$ns/services/$service"))
+        val port = svc.ports.firstOrNull { it.port == servicePort && it.protocol == "TCP" }
+            ?: throw KubeException("service $namespace/$service has no TCP port $servicePort")
+        if (svc.selector.isEmpty()) throw KubeException("service $namespace/$service has no selector, so there is no pod to forward to")
+        val selector = svc.selector.entries.joinToString(",") { (k, v) -> "$k=$v" }
+        val pods = KubeJson.pods(getOk("/api/v1/namespaces/$ns/pods?labelSelector=${URLEncoder.encode(selector, Charsets.UTF_8)}"))
+        val pod = pods.filter { it.isReady() }.minByOrNull { it.name }
+            ?: throw KubeException("no running, ready pod behind service $namespace/$service")
+        val target = port.targetPort
+        val podPort = when {
+            target == null -> port.port
+            target.toIntOrNull() != null -> target.toInt()
+            else -> pod.ports.firstOrNull { it.name == target }?.containerPort
+                ?: throw KubeException("pod ${pod.name} has no port named $target")
+        }
+        return pod.name to podPort
+    }
+
+    override suspend fun portForward(namespace: String, pod: String, port: Int): KubePortStream {
+        if (port !in 1..65535) throw KubeException("invalid port: $port")
+        return http.portForward("${podPath(namespace, pod)}/portforward?ports=$port")
+    }
+
     override fun close() = http.close()
+
+    private fun KubePod.isReady(): Boolean {
+        val counts = ready.split('/').map { it.toIntOrNull() }
+        return phase == "Running" && counts.size == 2 && (counts[1] ?: 0) > 0 && counts[0] == counts[1]
+    }
 
     private fun podPath(namespace: String, name: String) =
         "/api/v1/namespaces/${KubeNames.namespace(namespace)}/pods/${KubeNames.pod(name)}"

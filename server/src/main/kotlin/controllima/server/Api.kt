@@ -106,6 +106,7 @@ class Services(
     val kube: KubernetesService,
     val terminal: TerminalService,
     val remoteHosts: RemoteHostsService,
+    val forwards: PortForwardService,
 )
 
 /**
