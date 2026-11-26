@@ -15,6 +15,8 @@ import controllima.server.backup.BackupService
 import controllima.server.http.HttpServer
 import controllima.server.http.KtorHttpServer
 import controllima.server.metrics.FileMetricsStore
+import controllima.server.metrics.MetricsStore
+import controllima.server.metrics.SqliteMetricsStore
 import controllima.server.metrics.Retention
 import controllima.server.security.AccessControl
 import controllima.server.security.AuditLog
@@ -66,9 +68,12 @@ class ControlLimaServer(
         val containers = ContainerInventory(backends, events)
         val stats = StatsCollector(backends, inventory, containers, { settings.current })
         val ports = PortsService(backends, inventory, containers)
-        val metrics = FileMetricsStore(paths.metrics, {
-            settings.current.let { Retention(it.retentionRawHours, it.retention1mDays, it.retention15mDays, it.retention1hDays) }
-        })
+        val retention = { settings.current.let { Retention(it.retentionRawHours, it.retention1mDays, it.retention15mDays, it.retention1hDays) } }
+        // The file store keeps history working when the SQLite native library cannot load on this machine.
+        val metrics: MetricsStore = runCatching { SqliteMetricsStore(paths.metricsDb, retention) }.getOrElse { e ->
+            System.err.println("control-lima: SQLite metrics store unavailable (${e.message}); using the file store")
+            FileMetricsStore(paths.metrics, retention)
+        }
         val channels = ChannelStore(File(paths.alerts, "channels.json"), secrets)
         val notifier = ChannelNotifier(host, http, secrets)
         val alerts = AlertEngine(paths.alerts, channels, notifier, events)

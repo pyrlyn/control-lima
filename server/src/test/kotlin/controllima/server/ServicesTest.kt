@@ -5,6 +5,9 @@ import controllima.server.alerts.AlertInputs
 import controllima.server.alerts.ChannelStore
 import controllima.server.alerts.Notifier
 import controllima.server.metrics.FileMetricsStore
+import controllima.server.metrics.MetricsStore
+import controllima.server.metrics.SqliteMetricsStore
+import controllima.server.metrics.TieredMetricsStore
 import controllima.providers.host.SecretStore
 import controllima.shared.AlertState
 import controllima.shared.HostListener
@@ -27,10 +30,15 @@ class ServicesTest {
     private val dir = Files.createTempDirectory("cl-svc").toFile()
 
     @Test
-    fun `metrics downsample into 1 minute buckets and forget a target`() {
+    fun `file store downsamples and forgets`() = downsampleAndForget { clock -> FileMetricsStore(dir.resolve("m"), clock = clock) }
+
+    @Test
+    fun `sqlite store downsamples and forgets`() = downsampleAndForget { clock -> SqliteMetricsStore(dir.resolve("metrics.db"), clock = clock) }
+
+    private fun downsampleAndForget(open: (() -> Long) -> MetricsStore) {
         val start = 1_700_000_000_000L - Math.floorMod(1_700_000_000_000L, 3_600_000L)
         var now = start
-        val store = FileMetricsStore(dir.resolve("m"), clock = { now })
+        val store = open { now }
         // Two minutes of 2 s samples at 10 % then 30 % CPU.
         for (i in 0 until 60) {
             now = start + i * 2_000L
@@ -38,11 +46,14 @@ class ServicesTest {
         }
         now = start + 3 * 60_000L
         store.append(StatsSample("vm:lima/dev", now, cpuPercent = 50.0))
+        store.markGap("vm:lima/dev", start + 1_000, start + 2_000)
         val raw = store.series("vm:lima/dev", Metric.CPU, start, now + 1)
         assertTrue(raw.points.isNotEmpty())
         assertEquals(50.0, raw.points.maxOf { it.max })
+        assertEquals(1, raw.gaps.size)
+        assertEquals(listOf("vm:lima/dev"), store.targets())
 
-        val older = FileMetricsStore(dir.resolve("m"), clock = { start + 3 * 86_400_000L })
+        val older = open { start + 3 * 86_400_000L }
         val m1 = older.series("vm:lima/dev", Metric.CPU, start, start + 3 * 60_000L)
         assertEquals(60_000L, m1.stepMillis)
         assertEquals(listOf(10.0, 30.0), m1.points.take(2).map { it.avg })
@@ -50,14 +61,15 @@ class ServicesTest {
 
         store.forget("vm:lima/dev")
         assertTrue(store.series("vm:lima/dev", Metric.CPU, start, now + 1).points.isEmpty())
+        assertTrue(store.targets().isEmpty())
         store.close()
     }
 
     @Test
     fun `percentile and slope`() {
-        assertEquals(95.0, FileMetricsStore.percentile((1..100).map { it.toDouble() }, 0.95))
-        assertEquals(2.0, FileMetricsStore.slope(listOf(0.0 to 1.0, 1.0 to 3.0, 2.0 to 5.0))!!, 1e-9)
-        assertNull(FileMetricsStore.slope(listOf(0.0 to 1.0)))
+        assertEquals(95.0, TieredMetricsStore.percentile((1..100).map { it.toDouble() }, 0.95))
+        assertEquals(2.0, TieredMetricsStore.slope(listOf(0.0 to 1.0, 1.0 to 3.0, 2.0 to 5.0))!!, 1e-9)
+        assertNull(TieredMetricsStore.slope(listOf(0.0 to 1.0)))
     }
 
     private class MemorySecrets : SecretStore {

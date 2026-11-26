@@ -1,5 +1,6 @@
 // HTTP API and the services behind it. Ktor sits behind our HttpServer interface (http/KtorHttpServer.kt)
-// and the HttpPoster interface (alerts/KtorHttpPoster.kt); nothing else touches Ktor types.
+// and the HttpPoster interface (alerts/KtorHttpPoster.kt); nothing else touches Ktor types. Exposed and the
+// SQLite driver live only in metrics/SqliteMetricsStore.kt.
 plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.kotlin.serialization)
@@ -21,6 +22,9 @@ dependencies {
     implementation(libs.ktor.server.websockets)
     implementation(libs.ktor.client.core)
     implementation(libs.ktor.client.cio)
+    implementation(libs.exposed.core)
+    implementation(libs.exposed.jdbc)
+    implementation(libs.sqlite.jdbc)
     testImplementation(kotlin("test"))
     testImplementation(libs.ktor.server.test.host)
     testImplementation(testFixtures(project(":providers:process")))

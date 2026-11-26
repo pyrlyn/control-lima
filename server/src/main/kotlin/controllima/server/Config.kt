@@ -43,6 +43,7 @@ class DataPaths(val configDir: File, val dataDir: File) {
     val tokens get() = File(dataDir, "tokens.json")
     val users get() = File(dataDir, "users.json")
     val metrics get() = File(dataDir, "metrics")
+    val metricsDb get() = File(dataDir, "metrics.db")
     val backups get() = File(dataDir, "backups")
     val templates get() = File(dataDir, "templates")
     val alerts get() = File(dataDir, "alerts")
