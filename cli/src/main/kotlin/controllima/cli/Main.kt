@@ -1,12 +1,22 @@
 package controllima.cli
 
-import controllima.providers.lima.LimactlProvider
-import controllima.providers.process.ProcessCommandRunner
-import controllima.server.Api
-import controllima.server.KtorHttpServer
+import controllima.server.ControlLimaServer
+import controllima.server.DataPaths
+import controllima.server.Overrides
 import controllima.server.ServerConfig
-import java.security.SecureRandom
+import controllima.server.security.Secrets
 import kotlin.system.exitProcess
+
+/** Exit codes from docs/plan/cli-tui.md. */
+object Exit {
+    const val OK = 0
+    const val ERROR = 1
+    const val USAGE = 2
+    const val UNAVAILABLE = 3
+}
+
+class UsageError(message: String) : RuntimeException(message)
+class UnavailableError(message: String) : RuntimeException(message)
 
 fun main(args: Array<String>) {
     val options = try {
@@ -14,29 +24,52 @@ fun main(args: Array<String>) {
     } catch (e: IllegalArgumentException) {
         System.err.println(e.message)
         System.err.println(CliOptions.usage)
-        exitProcess(2)
+        exitProcess(Exit.USAGE)
     }
-    if (options.help) {
+    if (options.help || options.command == "help") {
         println(CliOptions.usage)
         return
     }
-    val token = newToken()
+    val code = try {
+        when (options.command) {
+            null, "serve" -> serve(options)
+            else -> Commands(options).run()
+        }
+    } catch (e: UsageError) {
+        System.err.println(e.message)
+        Exit.USAGE
+    } catch (e: IllegalArgumentException) {
+        System.err.println(e.message)
+        Exit.USAGE
+    } catch (e: UnavailableError) {
+        System.err.println(e.message)
+        Exit.UNAVAILABLE
+    } catch (e: Exception) {
+        System.err.println("Error: ${e.message ?: e::class.simpleName}")
+        Exit.ERROR
+    }
+    exitProcess(code)
+}
+
+fun paths(options: CliOptions) = DataPaths.default(dataDirOverride = options.dataDir)
+
+fun overrides(options: CliOptions) = Overrides(options.limaHome, options.colimaProfile, options.passthrough)
+
+private fun serve(options: CliOptions): Int {
+    // 192-bit launch token (docs/plan/auth.md); it lives only in this process and the printed URL.
+    val token = Secrets.randomHex(24)
     val config = ServerConfig(port = options.port, token = token)
-    val lima = LimactlProvider(ProcessCommandRunner(), limaHome = options.limaHome, extraArgs = options.passthrough)
-    val server = KtorHttpServer(config, Api(config, lima))
+    val server = ControlLimaServer(config, paths(options), overrides(options))
     val url = "http://127.0.0.1:${options.port}/?token=$token"
-    println("ControlLima on $url")
-    if (options.open) openBrowser(url)
-    Runtime.getRuntime().addShutdownHook(Thread { server.stop() })
-    server.start(wait = true)
-}
-
-private fun newToken(): String {
-    val bytes = ByteArray(24).also { SecureRandom().nextBytes(it) }
-    return bytes.joinToString("") { "%02x".format(it) }
-}
-
-private fun openBrowser(url: String) {
-    val command = if (System.getProperty("os.name").startsWith("Mac")) "open" else "xdg-open"
-    runCatching { ProcessBuilder(command, url).start() }
+    Runtime.getRuntime().addShutdownHook(Thread { server.close() })
+    try {
+        server.start(wait = false)
+    } catch (e: Exception) {
+        server.close()
+        throw IllegalStateException("Cannot listen on 127.0.0.1:${options.port}: ${e.message}")
+    }
+    println("ControlLima ${config.version} on $url")
+    if (options.open) server.services.backends.host.openBrowser(url)
+    Thread.currentThread().join()
+    return Exit.OK
 }

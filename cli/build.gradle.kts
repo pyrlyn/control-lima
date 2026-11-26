@@ -1,6 +1,7 @@
-// `control-lima` entry point: flag parsing, passthrough to limactl/colima after `--`, starts the server.
+// `control-lima` entry point: flag parsing, subcommands, passthrough to limactl/colima after `--`, starts the server.
 plugins {
     alias(libs.plugins.kotlin.jvm)
+    alias(libs.plugins.kotlin.serialization)
     application
 }
 
@@ -16,6 +17,8 @@ dependencies {
     implementation(project(":providers:lima"))
     implementation(project(":providers:colima"))
     implementation(project(":providers:docker"))
+    implementation(libs.kotlinx.coroutines.core)
+    implementation(libs.kotlinx.serialization.json)
     testImplementation(kotlin("test"))
 }
 
