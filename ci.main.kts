@@ -40,9 +40,16 @@ val checkout = Step("Checkout", uses = "actions/checkout@v4")
 val java = Step("Set up JDK 21", uses = "actions/setup-java@v4", with = mapOf("distribution" to "temurin", "java-version" to "21"))
 val gradle = Step("Set up Gradle", uses = "gradle/actions/setup-gradle@v4")
 
+// `build` also bundles the wasmJs app into the CLI jar, so one job covers the web build too.
 val jobs = listOf(
-    Job("build", "Build and test", "ubuntu-latest", listOf(checkout, java, gradle, Step("Build", run = "./gradlew build --console=plain"))),
-    Job("web", "Web bundle", "ubuntu-latest", listOf(checkout, java, gradle, Step("wasmJs distribution", run = "./gradlew :web:wasmJsBrowserDistribution --console=plain"))),
+    Job(
+        "build", "Build and test", "ubuntu-latest",
+        listOf(
+            checkout, java, gradle,
+            Step("Build and test", run = "./gradlew build :cli:installDist --console=plain"),
+            Step("Web app is packaged", run = "unzip -l cli/build/libs/cli-*.jar | grep -q 'web/index.html'"),
+        ),
+    ),
 )
 
 val out = File(".github/workflows/ci.yml")
