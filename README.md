@@ -4,10 +4,12 @@ A local control panel and dashboard for [Lima](https://lima-vm.io) and [Colima](
 One command starts a localhost-only web UI that shows your VMs and containers, their ports, IPs, images
 and live load, and lets you start, stop, rename and delete them safely.
 
-Status: **MVP and v1 implemented**, not released yet. Everything in [docs/plan](docs/plan/README.md) up to
-v1 is in place: inventory, live load over WebSocket, actions with type-to-confirm, charts and history,
-alerts and notifications, logs, templates, backups and restore, tokens, users and the audit log. v2 items
-(Kubernetes, desktop app, web terminal, remote hosts) are not started.
+Status: **MVP, v1 and v2 implemented**, not released yet. Everything in [docs/plan](docs/plan/README.md)
+is in place: inventory, live load over WebSocket, actions with type-to-confirm, charts and history, alerts
+and notifications, logs, templates, backups and restore, tokens, users and the audit log; and from v2:
+Kubernetes, nerdctl containers in Lima VMs, snapshots, `lima.yaml` editing, SQLite metrics, the opt-in web
+terminal, read-only remote hosts over SSH and the desktop app. Deferred: port forwarding (v2.1), a signed
+DMG and a native binary (see [packaging](docs/plan/packaging-updates.md)).
 
 ## Quick start
 
