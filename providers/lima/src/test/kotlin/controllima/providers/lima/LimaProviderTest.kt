@@ -153,4 +153,41 @@ class LimaProviderTest {
         val lima = LimactlProvider(ScriptedRunner(listOf("snapshot list" to ScriptedRunner.ok("before-upgrade\nclean\n"))))
         assertEquals(listOf("before-upgrade", "clean"), lima.snapshots("dev"))
     }
+
+    @Test
+    fun snapshotCommandsPassTheTagAsOneArgument() {
+        val runner = ScriptedRunner()
+        val lima = LimactlProvider(runner)
+        lima.snapshotCreate("dev", "before-upgrade")
+        lima.snapshotApply("dev", "before-upgrade")
+        lima.snapshotDelete("dev", "before-upgrade")
+        assertEquals(
+            listOf("create", "apply", "delete").map { listOf("limactl", "snapshot", it, "dev", "--tag", "before-upgrade") },
+            runner.calls,
+        )
+        assertFailsWith<ProviderException> { lima.snapshotCreate("dev", "--tag=x") }
+        assertFailsWith<ProviderException> { lima.snapshotApply("dev", "a b") }
+    }
+
+    @Test
+    fun validateUsesJsonLogsAndAbsolutePaths() {
+        val runner = ScriptedRunner()
+        LimactlProvider(runner).validate("/tmp/x/dev.yaml")
+        assertEquals(listOf("limactl", "--log-format=json", "validate", "/tmp/x/dev.yaml"), runner.calls.single())
+        assertFailsWith<ProviderException> { LimactlProvider(runner).validate("dev.yaml") }
+    }
+
+    @Test
+    fun logMessagesKeepWarningsAndAboveAndRawLines() {
+        val stderr = """
+            {"level":"info","msg":"`dev.yaml`: OK","time":"t"}
+            {"level":"fatal","msg":"vmType `nope` is not a registered driver","time":"t"}
+            {"level":"error","msg":"failed","error":"bad cpus","time":"t"}
+            plain text from an older limactl
+        """.trimIndent()
+        assertEquals(
+            listOf("vmType `nope` is not a registered driver", "failed: bad cpus", "plain text from an older limactl"),
+            LimaJson.parseLogMessages(stderr),
+        )
+    }
 }

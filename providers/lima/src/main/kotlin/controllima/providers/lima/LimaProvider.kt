@@ -63,6 +63,11 @@ interface LimaProvider {
     fun createCommand(name: String, locator: String, flags: CreateFlags): List<String> = unsupported()
     fun create(name: String, locator: String, flags: CreateFlags, onLine: (String) -> Unit = {}): CommandResult = unsupported()
     fun snapshots(name: String): List<String> = emptyList()
+    fun snapshotCreate(name: String, tag: String, onLine: (String) -> Unit = {}): CommandResult = unsupported()
+    fun snapshotApply(name: String, tag: String, onLine: (String) -> Unit = {}): CommandResult = unsupported()
+    fun snapshotDelete(name: String, tag: String): CommandResult = unsupported()
+    /** `limactl validate` on a YAML file; the result carries Lima's JSON log lines on stderr. */
+    fun validate(file: String): CommandResult = unsupported()
 
     private fun unsupported(): Nothing = throw UnsupportedOperationException("not supported by this LimaProvider")
 }
@@ -151,6 +156,25 @@ class LimactlProvider(
         return if (result.ok) result.stdout.lines().map { it.trim() }.filter { it.isNotEmpty() } else emptyList()
     }
 
+    override fun snapshotCreate(name: String, tag: String, onLine: (String) -> Unit) =
+        checked("limactl snapshot create", runner.run(cmd("snapshot", "create", validName(name), "--tag", validTag(tag)), ACTION_TIMEOUT, env, onLine = onLine), ACTION_TIMEOUT)
+
+    override fun snapshotApply(name: String, tag: String, onLine: (String) -> Unit) =
+        checked("limactl snapshot apply", runner.run(cmd("snapshot", "apply", validName(name), "--tag", validTag(tag)), ACTION_TIMEOUT, env, onLine = onLine), ACTION_TIMEOUT)
+
+    override fun snapshotDelete(name: String, tag: String) =
+        checked("limactl snapshot delete", runner.run(cmd("snapshot", "delete", validName(name), "--tag", validTag(tag)), DELETE_TIMEOUT, env), DELETE_TIMEOUT)
+
+    override fun validate(file: String): CommandResult {
+        if (!File(file).isAbsolute) throw ProviderException("validate needs an absolute path")
+        return runner.run(cmd("--log-format=json", "validate", file), timeout, env)
+    }
+
+    private fun validTag(tag: String): String {
+        if (!Names.isValidSnapshotTag(tag)) throw ProviderException("Invalid snapshot tag: $tag")
+        return tag
+    }
+
     private fun requireLocator(locator: String) {
         if (!(locator.startsWith("template://") || locator.startsWith("/")) || locator.any { it.isWhitespace() }) {
             throw ProviderException("Unsupported template locator: $locator")
@@ -232,6 +256,17 @@ object LimaJson {
             hostPid = long("driverPID")?.takeIf { it > 0 } ?: long("hostAgentPID")?.takeIf { it > 0 },
         )
     }
+
+    /**
+     * Messages from Lima's `--log-format=json` stderr at warning level and above. Lines that are not
+     * JSON are kept verbatim rather than interpreted, so nothing Lima said gets lost.
+     */
+    fun parseLogMessages(stderr: String): List<String> = stderr.lineSequence().map { it.trim() }.filter { it.isNotEmpty() }.mapNotNull { line ->
+        val o = runCatching { json.parseToJsonElement(line).jsonObject }.getOrNull() ?: return@mapNotNull line
+        val level = o.str("level")
+        if (level != null && level !in setOf("warning", "error", "fatal", "panic")) return@mapNotNull null
+        listOfNotNull(o.str("msg"), o.str("error")).joinToString(": ").ifEmpty { null }
+    }.toList()
 
     fun statusOf(status: String?): VmStatus = when (status) {
         "Running" -> VmStatus.RUNNING

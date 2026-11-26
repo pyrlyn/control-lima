@@ -98,27 +98,28 @@ class Services(
     val templates: TemplateService,
     val disk: DiskService,
     val about: AboutService,
+    val vmEdit: VmEditService,
 )
 
 /**
  * The HTTP API of docs/plan/api.md behind our [HttpApp] interface. Order of checks on every request:
  * Host/Origin → token → role → CSRF on writes → handler → audit of writes.
  */
-class Api(private val s: Services, private val static: StaticFiles = StaticFiles()) : HttpApp {
-    private class Ctx(val request: Request, val principal: Principal) {
+class Api(internal val s: Services, private val static: StaticFiles = StaticFiles()) : HttpApp {
+    internal class Ctx(val request: Request, val principal: Principal) {
         val actor get() = principal.actor
     }
 
-    private class Route(val role: Role, val handler: suspend Ctx.() -> Response)
+    internal class Route(val role: Role, val handler: suspend Ctx.() -> Response)
 
     private val router = Router<Route>()
 
-    private fun get(path: String, role: Role = Role.VIEWER, h: suspend Ctx.() -> Response) = router.add("GET", path, Route(role, h))
-    private fun post(path: String, role: Role, h: suspend Ctx.() -> Response) = router.add("POST", path, Route(role, h))
-    private fun put(path: String, role: Role, h: suspend Ctx.() -> Response) = router.add("PUT", path, Route(role, h))
-    private fun delete(path: String, role: Role, h: suspend Ctx.() -> Response) = router.add("DELETE", path, Route(role, h))
+    internal fun get(path: String, role: Role = Role.VIEWER, h: suspend Ctx.() -> Response) = router.add("GET", path, Route(role, h))
+    internal fun post(path: String, role: Role, h: suspend Ctx.() -> Response) = router.add("POST", path, Route(role, h))
+    internal fun put(path: String, role: Role, h: suspend Ctx.() -> Response) = router.add("PUT", path, Route(role, h))
+    internal fun delete(path: String, role: Role, h: suspend Ctx.() -> Response) = router.add("DELETE", path, Route(role, h))
 
-    private val protectedNames: Set<String> get() = s.settings.current.protectedNames.toSet() + ProtectedNames.defaults
+    internal val protectedNames: Set<String> get() = s.settings.current.protectedNames.toSet() + ProtectedNames.defaults
 
     init {
         routes()
@@ -216,17 +217,17 @@ class Api(private val s: Services, private val static: StaticFiles = StaticFiles
 
     // ---------- helpers ----------
 
-    private fun <T> json(value: T, serializer: KSerializer<T>, status: Int = 200) = Response.json(value, serializer, status)
-    private fun <T> list(value: List<T>, serializer: KSerializer<T>) = Response.json(value, ListSerializer(serializer))
-    private fun accepted(id: String) = json(ActionAccepted(id), ActionAccepted.serializer(), 202)
-    private fun ok() = Response.noContent()
+    internal fun <T> json(value: T, serializer: KSerializer<T>, status: Int = 200) = Response.json(value, serializer, status)
+    internal fun <T> list(value: List<T>, serializer: KSerializer<T>) = Response.json(value, ListSerializer(serializer))
+    internal fun accepted(id: String) = json(ActionAccepted(id), ActionAccepted.serializer(), 202)
+    internal fun ok() = Response.noContent()
 
-    private fun <T> decode(request: Request, serializer: KSerializer<T>): T {
+    internal fun <T> decode(request: Request, serializer: KSerializer<T>): T {
         if (request.bytes.size > MAX_BODY) badRequest("Request body too large")
         return ApiJson.decodeFromString(serializer, request.body.ifEmpty { "{}" })
     }
 
-    private fun Ctx.vmRef(): VmRef {
+    internal fun Ctx.vmRef(): VmRef {
         val source = VmSource.fromSlug(request.path("source")) ?: notFound("Unknown source")
         val name = request.path("name")
         if (!Names.isValidVmName(name)) badRequest("Invalid VM name")
@@ -235,12 +236,12 @@ class Api(private val s: Services, private val static: StaticFiles = StaticFiles
         return VmRef(source, name, home)
     }
 
-    private suspend fun Ctx.vm(): Vm {
+    internal suspend fun Ctx.vm(): Vm {
         val ref = vmRef()
         return s.inventory.vms().vms.firstOrNull { it.ref == ref } ?: notFound("No VM ${ref.name}")
     }
 
-    private fun Ctx.profile(): String {
+    internal fun Ctx.profile(): String {
         val p = request.param("profile") ?: s.backends.defaultProfile()
         if (!Names.isValidVmName(p)) badRequest("Invalid profile")
         return p
@@ -251,13 +252,13 @@ class Api(private val s: Services, private val static: StaticFiles = StaticFiles
 
     private fun Ctx.containerId(): String = request.path("id").also { if (!Names.isValidContainerRef(it)) badRequest("Invalid container id") }
 
-    private fun requireConfirm(typed: String, expected: String) {
+    internal fun requireConfirm(typed: String, expected: String) {
         if (typed != expected || expected.isEmpty()) badRequest("Type \"$expected\" to confirm")
     }
 
-    private fun lima(ref: VmRef) = s.backends.lima(ref.home) ?: throw IllegalStateException("Lima home is not configured")
+    internal fun lima(ref: VmRef) = s.backends.lima(ref.home) ?: throw IllegalStateException("Lima home is not configured")
 
-    private fun isUp(vm: Vm) = vm.status == VmStatus.RUNNING || vm.status == VmStatus.UNRESPONSIVE
+    internal fun isUp(vm: Vm) = vm.status == VmStatus.RUNNING || vm.status == VmStatus.UNRESPONSIVE
 
     // ---------- routes ----------
 
@@ -287,6 +288,7 @@ class Api(private val s: Services, private val static: StaticFiles = StaticFiles
         }
         settingsRoutes()
         accessRoutes()
+        vmEditRoutes()
     }
 
     private fun vmRoutes() {
@@ -362,7 +364,7 @@ class Api(private val s: Services, private val static: StaticFiles = StaticFiles
         }
     }
 
-    private fun failure(what: String, result: controllima.providers.process.CommandResult): String =
+    internal fun failure(what: String, result: controllima.providers.process.CommandResult): String =
         if (result.timedOut) "$what timed out" else result.stderr.lines().lastOrNull { it.isNotBlank() }?.take(300) ?: "$what failed (exit ${result.exitCode})"
 
     private suspend fun detail(vm: Vm): VmDetail {

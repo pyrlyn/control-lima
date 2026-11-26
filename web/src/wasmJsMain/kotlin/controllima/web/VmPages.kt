@@ -389,7 +389,7 @@ fun VmDetailPage(m: AppModel, ref: VmRef) {
     }
     VmActions(m, vm, compact = false) { m.navigate(Screen.Main(Page.Vms)) }
 
-    Tabs(listOf("Summary", "Charts", "Config", "Logs", "Backups", "Alerts"), tab) { tab = it }
+    Tabs(listOf("Summary", "Charts", "Config", "Logs", "Backups", "Alerts", "Snapshots"), tab) { tab = it }
     when (tab) {
         0 -> {
             Section("Summary") {
@@ -427,10 +427,11 @@ fun VmDetailPage(m: AppModel, ref: VmRef) {
             }
         }
         1 -> MetricCharts(m, target, listOf(Metric.CPU, Metric.MEMORY_PERCENT, Metric.NET_RX, Metric.NET_TX, Metric.DISK_READ, Metric.DISK_WRITE, Metric.DISK_PERCENT, Metric.LOAD, Metric.PROBE_LATENCY))
-        2 -> Section("lima.yaml (read-only)") { if (d.config != null) CodeBlock(d.config!!) else Text("No config file found.") }
+        2 -> VmConfigTab(m, vm, d.config)
         3 -> LogsPage(m, target, embedded = true)
         4 -> VmBackups(m, target)
         5 -> VmAlerts(m, target)
+        6 -> VmSnapshotsTab(m, vm)
     }
 }
 

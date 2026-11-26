@@ -22,3 +22,6 @@ Create VM (operator; VM created stopped, "Start now" offered), save VM as templa
 
 ## Implementation
 `TemplatesPage` in `web/.../ManagePages.kt`. Create is a wizard: parameters, dry-run preview (command, YAML, warnings), then create stopped as a tracked action. Colima templates are preview-only. Import is a pasted `lima.yaml`; export downloads the template's YAML.
+
+v2: the import dialog has "Validate", which sends the YAML to `POST /api/lima/validate` (`limactl validate`)
+and shows Lima's messages before the template is saved.

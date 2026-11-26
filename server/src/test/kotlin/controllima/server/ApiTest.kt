@@ -180,4 +180,34 @@ class ApiTest {
         assertEquals(404, call("GET", "/api/nope").status)
         assertEquals(405, call("PUT", ApiRoutes.VMS, "{}").status)
     }
+
+    @Test
+    fun `snapshots are offered only for qemu and apply needs a typed name`() {
+        val vz = call("GET", "/api/vms/lima/infra-test/snapshots")
+        assertEquals(200, vz.status)
+        assertTrue("\"supported\":false" in vz.body, vz.body)
+        val apply = call("POST", "/api/vms/lima/tc-dev-1/snapshots/clean/apply", """{"confirmName":"wrong"}""")
+        assertEquals(400, apply.status)
+        val create = call("POST", "/api/vms/lima/infra-test/snapshots", """{"tag":"clean"}""")
+        assertEquals(409, create.status)
+        assertEquals(400, call("POST", "/api/vms/lima/tc-dev-1/snapshots", """{"tag":"--force"}""").status)
+    }
+
+    @Test
+    fun `config is admin only and cannot be saved while running`() {
+        val viewer = namedToken(Role.VIEWER)
+        assertEquals(403, call("GET", "/api/vms/lima/tc-dev-1/config", auth = viewer).status)
+        val running = call("PUT", "/api/vms/lima/infra-test/config", """{"yaml":"cpus: 2","confirmName":"infra-test"}""")
+        assertEquals(409, running.status)
+    }
+
+    @Test
+    fun `validate runs limactl validate on a temp file and reports lima's messages`() {
+        val r = call("POST", "/api/lima/validate", """{"yaml":"cpus: 2"}""")
+        assertEquals(200, r.status, r.body)
+        val call = runner.calls.last { "validate" in it }
+        assertEquals(listOf("limactl", "--log-format=json", "validate"), call.take(3))
+        assertTrue(call[3].endsWith("/check.yaml"))
+        assertTrue("\"ok\":true" in r.body)
+    }
 }

@@ -112,4 +112,6 @@ object Names {
     fun isValidContainerName(name: String): Boolean = name.length <= 128 && containerName.matches(name)
     fun isValidContainerRef(ref: String): Boolean = containerId.matches(ref) || isValidContainerName(ref)
     fun isValidImageRef(ref: String): Boolean = imageRef.matches(ref)
+    /** Snapshot tags follow the VM name rule, so they are safe as a single command-line argument. */
+    fun isValidSnapshotTag(tag: String): Boolean = isValidVmName(tag)
 }

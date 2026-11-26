@@ -45,6 +45,20 @@ class ApiClient(private val transport: HttpTransport, var token: String) {
     suspend fun cloneVm(ref: VmRef, newName: String): ActionAccepted =
         send("POST", ApiRoutes.vmAction(ref, "clone"), encode(CloneRequest.serializer(), CloneRequest(newName)))
 
+    // Snapshots and config editing (v2)
+    suspend fun snapshots(ref: VmRef): SnapshotList = get(VmEditRoutes.snapshots(ref))
+    suspend fun createSnapshot(ref: VmRef, tag: String): ActionAccepted =
+        send("POST", VmEditRoutes.snapshots(ref), encode(SnapshotRequest.serializer(), SnapshotRequest(tag)))
+    suspend fun applySnapshot(ref: VmRef, tag: String, confirmName: String): ActionAccepted =
+        send("POST", VmEditRoutes.snapshot(ref, tag, "apply"), encode(ConfirmRequest.serializer(), ConfirmRequest(confirmName)))
+    suspend fun deleteSnapshot(ref: VmRef, tag: String, confirmName: String): ActionAccepted =
+        send("DELETE", VmEditRoutes.snapshot(ref, tag), encode(ConfirmRequest.serializer(), ConfirmRequest(confirmName)))
+    suspend fun vmConfig(ref: VmRef): VmConfig = get(VmEditRoutes.config(ref))
+    suspend fun saveVmConfig(ref: VmRef, yaml: String, confirmName: String): SaveConfigResult =
+        send("PUT", VmEditRoutes.config(ref), encode(SaveConfigRequest.serializer(), SaveConfigRequest(yaml, confirmName)))
+    suspend fun validateLimaYaml(yaml: String): ValidationResult =
+        send("POST", VmEditRoutes.LIMA_VALIDATE, encode(ValidateRequest.serializer(), ValidateRequest(yaml)))
+
     // Containers
     suspend fun containers(profile: String? = null): ContainerList = get(ApiRoutes.CONTAINERS + profileQuery(profile))
     suspend fun container(id: String, profile: String): ContainerDetail = get(ApiRoutes.container(id, profile))

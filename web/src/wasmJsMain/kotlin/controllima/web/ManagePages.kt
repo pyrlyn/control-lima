@@ -250,6 +250,7 @@ private fun ImportTemplateDialog(m: AppModel, onDismiss: () -> Unit, onSaved: ()
     var name by remember { mutableStateOf("") }
     var yaml by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
+    var checked by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -257,12 +258,23 @@ private fun ImportTemplateDialog(m: AppModel, onDismiss: () -> Unit, onSaved: ()
         text = {
             Column {
                 OutlinedTextField(name, { name = it }, label = { Text("Template name") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(yaml, { yaml = it }, label = { Text("lima.yaml") }, textStyle = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+                OutlinedTextField(yaml, { yaml = it; checked = null }, label = { Text("lima.yaml") }, textStyle = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
                     modifier = Modifier.fillMaxWidth().height(260.dp).padding(top = 8.dp))
+                checked?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
                 error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             }
         },
         confirmButton = {
+            TextButton(enabled = yaml.isNotBlank() && m.can(Role.OPERATOR), onClick = {
+                scope.launch {
+                    checked = try {
+                        val v = m.api.validateLimaYaml(yaml)
+                        if (v.ok) "limactl validate: OK" else v.errors.joinToString("\n")
+                    } catch (e: ApiException) {
+                        e.message
+                    }
+                }
+            }) { Text("Validate") }
             Button(enabled = name.isNotBlank() && yaml.isNotBlank(), onClick = {
                 scope.launch {
                     try {

@@ -54,6 +54,13 @@ All endpoints are on `127.0.0.1:<port>`. JSON bodies use the models in `shared`.
 | GET/POST/DELETE | `/api/tokens[/{id}]` | A | v1 | named tokens with roles |
 | GET/POST/DELETE | `/api/users[/{id}]` | A | v1 | optional multi-user |
 | GET | `/api/audit?from=&to=&actor=` | A | v1 | audit log |
+| GET | `/api/vms/{source}/{name}/snapshots` | V | v2 | `{supported, reason, tags}`; QEMU Lima VMs only |
+| POST | `/api/vms/{source}/{name}/snapshots` | O | v2 | `{tag}`; action |
+| POST | `/api/vms/{source}/{name}/snapshots/{tag}/apply` | A | v2 | `{confirmName: <vm>}`; action |
+| DELETE | `/api/vms/{source}/{name}/snapshots/{tag}` | A | v2 | `{confirmName: <tag>}`; action |
+| GET | `/api/vms/{source}/{name}/config` | A | v2 | unredacted `lima.yaml` and whether it can be edited now |
+| PUT | `/api/vms/{source}/{name}/config` | A | v2 | `{yaml, confirmName}`; stopped Lima VMs; validates, backs up, then writes |
+| POST | `/api/lima/validate` | O | v2 | `{yaml}` → `limactl validate` messages |
 
 ## WebSocket
 
