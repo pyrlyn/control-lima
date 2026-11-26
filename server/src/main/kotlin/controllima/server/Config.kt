@@ -135,6 +135,12 @@ class SettingsStore(private val file: File) {
             require(s.retentionRawHours in 1..168) { "Raw retention must be 1..168 h" }
             require(s.retention1mDays in 1..90 && s.retention15mDays in 1..365 && s.retention1hDays in 1..3650) { "Retention out of range" }
             require(s.backupSchedule.everyDays in 1..30 && s.backupSchedule.keep in 1..100) { "Backup schedule out of range" }
+            require(s.remoteHosts.size <= RemoteHostsService.MAX_HOSTS) { "At most ${RemoteHostsService.MAX_HOSTS} remote hosts" }
+            require(s.remoteHosts.map { it.name }.toSet().size == s.remoteHosts.size) { "Remote host names must be unique" }
+            s.remoteHosts.forEach { h ->
+                require(Names.isValidVmName(h.name)) { "Invalid remote host name: ${h.name}" }
+                require(Names.isValidSshTarget(h.ssh)) { "Invalid ssh target for ${h.name}: use host, user@host or an ssh config alias" }
+            }
             s.redactionPatterns.forEach { p -> require(runCatching { Regex(p) }.isSuccess) { "Invalid redaction pattern: $p" } }
         }
 

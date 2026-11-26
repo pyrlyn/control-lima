@@ -26,6 +26,7 @@ object ApiRoutes {
     const val TEMPLATES = "/api/templates"
     const val DISK = "/api/disk"
     /** Colima profiles plus `lima:<vm>` for running Lima VMs with nerdctl. Not under /api/containers: "profiles" is a valid container name. */
+    const val REMOTE_HOSTS = "/api/remote-hosts"
     const val CONTAINER_PROFILES = "/api/container-profiles"
     const val CLEANUP = "/api/disk/cleanup"
     const val SETTINGS = "/api/settings"
@@ -113,6 +114,9 @@ object Names {
     private val imageRef = Regex("^[a-zA-Z0-9][a-zA-Z0-9._/:@-]{0,254}$")
 
     fun isValidVmName(name: String): Boolean = name.length <= 64 && limaName.matches(name)
+    private val sshTarget = Regex("^([a-zA-Z0-9_][a-zA-Z0-9_.-]*@)?[a-zA-Z0-9_][a-zA-Z0-9_.-]*$")
+    /** `host`, `user@host` or an ssh config alias; never starts with `-`, so ssh cannot read it as an option. */
+    fun isValidSshTarget(target: String): Boolean = target.length <= 255 && sshTarget.matches(target)
     fun isValidContainerName(name: String): Boolean = name.length <= 128 && containerName.matches(name)
     fun isValidContainerRef(ref: String): Boolean = containerId.matches(ref) || isValidContainerName(ref)
 

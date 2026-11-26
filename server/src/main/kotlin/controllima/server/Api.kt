@@ -28,6 +28,7 @@ import controllima.server.security.Redactor
 import controllima.shared.ActionAccepted
 import controllima.shared.AlertRule
 import controllima.shared.ApiError
+import controllima.shared.RemoteHostStatus
 import controllima.shared.ApiJson
 import controllima.shared.ApiRoutes
 import controllima.shared.CleanupRequest
@@ -104,6 +105,7 @@ class Services(
     val vmEdit: VmEditService,
     val kube: KubernetesService,
     val terminal: TerminalService,
+    val remoteHosts: RemoteHostsService,
 )
 
 /**
@@ -392,6 +394,7 @@ class Api(internal val s: Services, private val static: StaticFiles = StaticFile
 
     private fun containerRoutes() {
         get(ApiRoutes.CONTAINERS) { json(s.containers.list(profile()), controllima.shared.ContainerList.serializer()) }
+        get(ApiRoutes.REMOTE_HOSTS) { json(s.remoteHosts.list(), ListSerializer(RemoteHostStatus.serializer())) }
         get(ApiRoutes.CONTAINER_PROFILES) { json(s.containers.profiles(), ListSerializer(String.serializer())) }
         get("${ApiRoutes.CONTAINERS}/{id}") {
             val detail = docker(profile()).inspect(containerId())

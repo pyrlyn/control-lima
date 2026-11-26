@@ -411,8 +411,25 @@ data class Settings(
     val multiUser: Boolean = false,
     /** Admins may open a shell in a running VM from the browser. Off by default: it is full guest access. */
     val webTerminal: Boolean = false,
+    /** Other machines whose Lima and Colima VMs are listed read-only, over the user's own ssh setup. */
+    val remoteHosts: List<RemoteHost> = emptyList(),
     val backupSchedule: BackupSchedule = BackupSchedule(),
     val redactionPatterns: List<String> = listOf("(?i)(password|passwd|secret|token|api[_-]?key)=\\S+"),
+)
+
+/** A remote machine: [ssh] is `host`, `user@host` or an alias from `~/.ssh/config`. */
+@Serializable
+data class RemoteHost(val name: String, val ssh: String)
+
+/** What one remote host reported; VMs are read-only and carry the remote status as-is (no probe). */
+@Serializable
+data class RemoteHostStatus(
+    val name: String,
+    val ssh: String,
+    val reachable: Boolean,
+    val error: String? = null,
+    val vms: List<Vm> = emptyList(),
+    val checkedAtMillis: Long = 0,
 )
 
 @Serializable

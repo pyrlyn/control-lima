@@ -35,6 +35,8 @@ import controllima.shared.CreateTokenRequest
 import controllima.shared.CreateUserRequest
 import controllima.shared.CreatedToken
 import controllima.shared.Format
+import controllima.shared.Names
+import controllima.shared.RemoteHost
 import controllima.shared.Role
 import controllima.shared.Settings
 import controllima.shared.SizeUnits
@@ -89,12 +91,19 @@ private fun GeneralTab(m: AppModel, s: Settings, save: (Settings) -> Unit) {
     var compact by remember(s) { mutableStateOf(s.compact) }
     var multiUser by remember(s) { mutableStateOf(s.multiUser) }
     var webTerminal by remember(s) { mutableStateOf(s.webTerminal) }
+    var remotes by remember(s) { mutableStateOf(s.remoteHosts.joinToString("\n") { "${it.name} ${it.ssh}" }) }
+    val remoteHosts = remoteHosts(remotes)
     val ints = listOf(live, background, probe).map { it.toIntOrNull() }
     val intsOk = ints.all { it != null && it in 1..3600 }
     val homesOk = lines(homes).all { it.startsWith("/") }
     Section("Sources") {
         Field("Lima homes (absolute paths, one per line; empty means ~/.lima)", homes, admin, error = if (homesOk) null else "Paths must be absolute", singleLine = false) { homes = it }
         Field("Colima profiles (one per line; empty means auto-detect)", profiles, admin, singleLine = false) { profiles = it }
+        Field(
+            "Remote hosts, read-only (one per line: name ssh-target, e.g. mini me@mac-mini.local)", remotes, admin,
+            error = if (remoteHosts != null) null else "Each line is a name and a host, user@host or ssh config alias; names are unique",
+            singleLine = false,
+        ) { remotes = it }
         Field("Default Colima profile", defaultProfile, admin) { defaultProfile = it }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Field("limactl", limactl, admin, Modifier.weight(1f)) { limactl = it }
@@ -125,14 +134,14 @@ private fun GeneralTab(m: AppModel, s: Settings, save: (Settings) -> Unit) {
         }
         if (webTerminal) Text("Admins can open a shell in any running VM from the browser. Sessions are audited.", style = MaterialTheme.typography.bodySmall)
     }
-    RoleButton(m, Strings.SAVE, Role.ADMIN, enabled = intsOk && homesOk) {
+    RoleButton(m, Strings.SAVE, Role.ADMIN, enabled = intsOk && homesOk && remoteHosts != null) {
         save(
             s.copy(
                 limaHomes = lines(homes), colimaProfiles = lines(profiles), defaultProfile = defaultProfile.trim().ifEmpty { "default" },
                 limactlPath = limactl.trim(), colimaPath = colima.trim(), limaArgs = words(limaArgs), colimaArgs = words(colimaArgs),
                 liveIntervalSeconds = ints[0]!!, backgroundIntervalSeconds = ints[1]!!, probeTimeoutSeconds = ints[2]!!,
                 theme = theme, units = units, compact = compact, multiUser = multiUser,
-                webTerminal = webTerminal,
+                webTerminal = webTerminal, remoteHosts = remoteHosts.orEmpty(),
             ),
         )
     }
@@ -460,6 +469,13 @@ private fun Toggle(label: String, value: Boolean, enabled: Boolean, onChange: (B
         Text("  $label")
     }
 }
+
+/** Null when a line is not `name ssh-target` with valid parts, so Save stays off until it is fixed. */
+private fun remoteHosts(text: String): List<RemoteHost>? = lines(text).map { line ->
+    val parts = line.split(Regex("\\s+"))
+    if (parts.size != 2 || !Names.isValidVmName(parts[0]) || !Names.isValidSshTarget(parts[1])) return null
+    RemoteHost(parts[0], parts[1])
+}.takeIf { hosts -> hosts.map { it.name }.toSet().size == hosts.size }
 
 private fun lines(text: String) = text.lines().map { it.trim() }.filter { it.isNotEmpty() }
 private fun words(text: String) = text.split(' ', '\t', '\n').filter { it.isNotEmpty() }

@@ -6,7 +6,7 @@ Figma: TBD
 Configure ControlLima and manage who can do what.
 
 ## Data shown
-Sections: General (Lima homes, Colima profiles, binaries and versions, passthrough args, polling, units, theme, web terminal for admins (v2, off by default)), Protected names, Metrics retention and DB size, Disk cleanup, Notifications (link to Alerts), Access (tokens, users, roles), Audit log, About (version, update check toggle, data dir).
+Sections: General (Lima homes, Colima profiles, binaries and versions, passthrough args, polling, units, theme, web terminal for admins (v2, off by default), remote hosts (v2, read-only; one `name ssh-target` per line)), Protected names, Metrics retention and DB size, Disk cleanup, Notifications (link to Alerts), Access (tokens, users, roles), Audit log, About (version, update check toggle, data dir).
 
 ## Actions
 Edit settings (admin), add/remove protected names (admin, audited), create/revoke tokens (admin; token shown once), manage users (admin), filter/export audit log (admin), forget metrics history.

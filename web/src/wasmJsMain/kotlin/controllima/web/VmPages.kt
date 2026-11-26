@@ -211,6 +211,7 @@ fun VmsPage(m: AppModel) {
     if (m.vmsError != null) Banner("Showing the list from ${Format.clock(m.vmsAt)}: ${m.vmsError}", BannerKind.WARNING)
     if (list.vms.isEmpty()) {
         EmptyState(Strings.NO_VMS, Strings.NO_VMS_HINT, ("Create from template" to { m.navigate(Screen.Main(Page.Templates)) }).takeIf { m.can(Role.OPERATOR) })
+        RemoteHosts(m)
         return
     }
     val rows = VmTable.sort(VmTable.filter(list.vms, query, source, status), sort, desc)
@@ -244,7 +245,52 @@ fun VmsPage(m: AppModel) {
             Cell(4f) { VmActions(m, vm, compact = true) }
         }
     }
+    RemoteHosts(m)
 }
+
+/**
+ * VMs on the remote hosts from Settings (docs/pages/vms.md, Remote hosts). Read-only: no actions, no detail
+ * page, and statuses as the remote limactl or colima reports them, without a probe.
+ */
+@Composable
+private fun RemoteHosts(m: AppModel) {
+    val hosts = load(everyMillis = REMOTE_REFRESH_MILLIS) { m.api.remoteHosts() }
+    val list = hosts.value.orEmpty()
+    if (list.isEmpty() && hosts.error == null) return
+    Section("Remote hosts (read-only)", modifier = Modifier.padding(top = 24.dp)) {
+        hosts.error?.let { Banner(it, action = Strings.RETRY to hosts.reload) }
+        list.forEach { h ->
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(h.name, style = MaterialTheme.typography.titleSmall)
+                Text(h.ssh, style = MaterialTheme.typography.bodySmall)
+                if (!h.reachable) Tag("unreachable", MaterialTheme.colorScheme.errorContainer)
+                Text("checked ${Format.clock(h.checkedAtMillis)}", style = MaterialTheme.typography.bodySmall)
+            }
+            h.error?.let { Banner("${h.name}: $it", if (h.reachable) BannerKind.WARNING else BannerKind.ERROR) }
+            if (h.reachable && h.vms.isEmpty()) Text("No VMs", style = MaterialTheme.typography.bodySmall)
+            h.vms.forEach { vm ->
+                TableRow {
+                    Cell(1.6f) { StatusBadge(vm.status) }
+                    Cell(2f) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(vm.name)
+                            if (vm.protected) Tag(Strings.PROTECTED)
+                        }
+                    }
+                    TextCell(1.1f, vm.source.slug)
+                    TextCell(1.4f, listOfNotNull(vm.arch, vm.vmType).joinToString(" · ").ifEmpty { null })
+                    TextCell(0.7f, vm.cpus?.toString())
+                    TextCell(1f, Format.bytes(vm.memoryBytes, m.units))
+                    TextCell(1f, Format.bytes(vm.diskBytes, m.units))
+                    TextCell(1.6f, vm.ipAddresses.take(2).joinToString("\n").ifEmpty { null })
+                }
+            }
+        }
+    }
+}
+
+/** Matches the server's cache, so each refresh brings fresh data without extra ssh round trips. */
+private const val REMOTE_REFRESH_MILLIS = 30_000L
 
 fun isProtected(m: AppModel, vm: Vm) = vm.protected || !Confirm.canDelete(vm.name, m.protectedNames)
 
