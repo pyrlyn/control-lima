@@ -1,6 +1,6 @@
 # Backups
 
-Figma: TBD
+Figma: https://www.figma.com/design/QgRQevknzGb74dkcz4FfAN/ControlLima?node-id=1-2156 (dark), https://www.figma.com/design/QgRQevknzGb74dkcz4FfAN/ControlLima?node-id=1-4187 (light)
 
 ## Purpose
 Back up and restore VM configs and ControlLima settings.

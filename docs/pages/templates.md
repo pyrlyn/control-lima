@@ -1,6 +1,6 @@
 # Templates
 
-Figma: TBD
+Figma: https://www.figma.com/design/QgRQevknzGb74dkcz4FfAN/ControlLima?node-id=1-2019 (dark), https://www.figma.com/design/QgRQevknzGb74dkcz4FfAN/ControlLima?node-id=1-4050 (light)
 
 ## Purpose
 Create VMs from built-in or custom templates; manage custom templates.

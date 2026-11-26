@@ -1,6 +1,6 @@
 # Confirm destructive action dialog
 
-Figma: TBD
+Figma: https://www.figma.com/design/QgRQevknzGb74dkcz4FfAN/ControlLima?node-id=1-620 (dark), https://www.figma.com/design/QgRQevknzGb74dkcz4FfAN/ControlLima?node-id=1-2651 (light)
 
 ## Purpose
 Shared dialog for delete, restore, prune and VM rename.

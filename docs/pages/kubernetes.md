@@ -1,6 +1,6 @@
 # Kubernetes
 
-Figma: TBD
+Figma: https://www.figma.com/design/QgRQevknzGb74dkcz4FfAN/ControlLima?node-id=1-1225 (dark), https://www.figma.com/design/QgRQevknzGb74dkcz4FfAN/ControlLima?node-id=1-3256 (light)
 
 ## Purpose
 Read-mostly view of the Kubernetes clusters that run inside Colima (`colima start --kubernetes`) and Lima

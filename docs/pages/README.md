@@ -4,7 +4,7 @@ One file per page or screen. Keep this list, the files and the `Page` enum in
 `web/src/commonMain/kotlin/controllima/web/App.kt` in sync (see AGENTS.md).
 
 Every page doc has: purpose, data shown, actions, states (empty, loading, error, unresponsive), API
-endpoints, and a `Figma:` line. Until the Figma file exists the line says `Figma: TBD`.
+endpoints, and a `Figma:` line. A page without a frame yet says `Figma: TBD`.
 
 | Page | Doc | Phase |
 |---|---|---|

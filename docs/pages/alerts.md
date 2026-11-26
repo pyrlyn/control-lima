@@ -1,6 +1,6 @@
 # Alerts
 
-Figma: TBD
+Figma: alerts https://www.figma.com/design/QgRQevknzGb74dkcz4FfAN/ControlLima?node-id=1-1662 (dark), https://www.figma.com/design/QgRQevknzGb74dkcz4FfAN/ControlLima?node-id=1-3693 (light); rules https://www.figma.com/design/QgRQevknzGb74dkcz4FfAN/ControlLima?node-id=1-1797 (dark), https://www.figma.com/design/QgRQevknzGb74dkcz4FfAN/ControlLima?node-id=1-3828 (light)
 
 ## Purpose
 See firing and past alerts, manage rules and notification channels.

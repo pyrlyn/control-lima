@@ -1,6 +1,6 @@
 # VMs
 
-Figma: TBD
+Figma: https://www.figma.com/design/QgRQevknzGb74dkcz4FfAN/ControlLima?node-id=1-447 (dark), https://www.figma.com/design/QgRQevknzGb74dkcz4FfAN/ControlLima?node-id=1-2478 (light)
 
 ## Purpose
 List and manage all Lima VMs and Colima profiles.

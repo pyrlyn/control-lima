@@ -1,6 +1,6 @@
 # Overview
 
-Figma: TBD
+Figma: https://www.figma.com/design/QgRQevknzGb74dkcz4FfAN/ControlLima?node-id=1-389 (dark), https://www.figma.com/design/QgRQevknzGb74dkcz4FfAN/ControlLima?node-id=1-2420 (light)
 
 ## Purpose
 The landing page: health of everything at a glance and the shortest path to a problem.

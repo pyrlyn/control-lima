@@ -1,6 +1,6 @@
 # Metrics
 
-Figma: TBD
+Figma: https://www.figma.com/design/QgRQevknzGb74dkcz4FfAN/ControlLima?node-id=1-1578 (dark), https://www.figma.com/design/QgRQevknzGb74dkcz4FfAN/ControlLima?node-id=1-3609 (light)
 
 ## Purpose
 Charts and history across VMs and containers; trends.

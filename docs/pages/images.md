@@ -1,6 +1,6 @@
 # Images
 
-Figma: TBD
+Figma: https://www.figma.com/design/QgRQevknzGb74dkcz4FfAN/ControlLima?node-id=1-921 (dark), https://www.figma.com/design/QgRQevknzGb74dkcz4FfAN/ControlLima?node-id=1-2952 (light)
 
 ## Purpose
 See images, their size and who uses them; clean up (v1).

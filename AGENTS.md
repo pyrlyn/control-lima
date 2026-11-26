@@ -4,10 +4,12 @@ Rules for coding agents and contributors working on ControlLima.
 
 ## Design
 
-<!-- FIGMA-PLACEHOLDER: replace this line with the real file URL once it exists. -->
-**Figma file: TBD (to be created)**
+**Figma file: https://www.figma.com/design/QgRQevknzGb74dkcz4FfAN/ControlLima** (page "ControlLima":
+"Screens · Dark" and "Screens · Light" sections, built from the Pyrlyn UI kit).
 
-Never invent Figma URLs. Until the file exists, every page doc says `Figma: TBD`.
+Never invent Figma URLs. A page without a frame yet says `Figma: TBD`. Colours, type and spacing in
+`web/src/commonMain/kotlin/controllima/web/Theme.kt` come from the file's variables; change them there
+when the file changes.
 
 ## Page docs (required)
 

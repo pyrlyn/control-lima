@@ -1,6 +1,6 @@
 # VM detail
 
-Figma: TBD
+Figma: https://www.figma.com/design/QgRQevknzGb74dkcz4FfAN/ControlLima?node-id=1-526 (dark), https://www.figma.com/design/QgRQevknzGb74dkcz4FfAN/ControlLima?node-id=1-2557 (light)
 
 ## Purpose
 Everything about one VM: config, network, load over time, logs and actions.

@@ -1,6 +1,6 @@
 # Containers
 
-Figma: TBD
+Figma: https://www.figma.com/design/QgRQevknzGb74dkcz4FfAN/ControlLima?node-id=1-800 (dark), https://www.figma.com/design/QgRQevknzGb74dkcz4FfAN/ControlLima?node-id=1-2831 (light)
 
 ## Purpose
 List and manage containers of Colima profiles (v2: nerdctl inside Lima VMs).

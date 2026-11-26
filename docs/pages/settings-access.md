@@ -1,6 +1,6 @@
 # Settings & Access
 
-Figma: TBD
+Figma: https://www.figma.com/design/QgRQevknzGb74dkcz4FfAN/ControlLima?node-id=1-2230 (dark), https://www.figma.com/design/QgRQevknzGb74dkcz4FfAN/ControlLima?node-id=1-4261 (light)
 
 ## Purpose
 Configure ControlLima and manage who can do what.

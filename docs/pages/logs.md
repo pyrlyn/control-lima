@@ -1,6 +1,6 @@
 # Logs
 
-Figma: TBD
+Figma: https://www.figma.com/design/QgRQevknzGb74dkcz4FfAN/ControlLima?node-id=1-1931 (dark), https://www.figma.com/design/QgRQevknzGb74dkcz4FfAN/ControlLima?node-id=1-3962 (light)
 
 ## Purpose
 Read and follow logs of containers, Lima host agents, serial consoles and guest journals.

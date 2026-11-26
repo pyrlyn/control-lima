@@ -1,6 +1,6 @@
 # Ports & Network
 
-Figma: TBD
+Figma: https://www.figma.com/design/QgRQevknzGb74dkcz4FfAN/ControlLima?node-id=1-1469 (dark), https://www.figma.com/design/QgRQevknzGb74dkcz4FfAN/ControlLima?node-id=1-3500 (light)
 
 ## Purpose
 Which host ports and IPs are in use, by what, and conflicts.

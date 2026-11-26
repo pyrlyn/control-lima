@@ -1,6 +1,6 @@
 # Container detail
 
-Figma: TBD
+Figma: TBD (no frame in the file yet)
 
 ## Purpose
 One container: config, ports, load, logs.
