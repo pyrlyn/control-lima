@@ -15,6 +15,11 @@ data class KubeResponse(val status: Int, val body: String)
 interface KubeHttp : AutoCloseable {
     fun get(path: String): KubeResponse
     fun delete(path: String): KubeResponse
+    /**
+     * GETs a response that stays open (`follow=true`) and hands over its lines as they arrive; returns when
+     * the API ends it. A non-2xx answer throws [KubeApiException].
+     */
+    suspend fun streamLines(path: String, onLine: suspend (String) -> Unit)
     /** Opens a `pods/portforward` WebSocket; [path] includes the `?ports=` query. */
     suspend fun portForward(path: String): KubePortStream
     override fun close()
@@ -33,6 +38,8 @@ interface KubeClient : AutoCloseable {
     /** The owning controller recreates the pod, which is how a pod is restarted. */
     fun deletePod(namespace: String, name: String)
     fun podLogs(namespace: String, name: String, container: String? = null, tailLines: Int = 200): List<LogLine>
+    /** [tailLines] lines, then new ones as the container writes them, until the API ends the stream. */
+    suspend fun followPodLogs(namespace: String, name: String, container: String?, tailLines: Int, onLine: suspend (LogLine) -> Unit)
     fun pod(namespace: String, name: String): KubePod
     /**
      * The pod and pod port that [servicePort] of a service leads to, chosen the way
@@ -80,11 +87,19 @@ class HttpKubeClient(private val http: KubeHttp) : KubeClient {
 
     override fun podLogs(namespace: String, name: String, container: String?, tailLines: Int): List<LogLine> {
         if (tailLines !in 1..MAX_TAIL) throw KubeException("tailLines must be in 1..$MAX_TAIL")
-        val query = buildString {
-            append("?timestamps=true&tailLines=").append(tailLines)
-            container?.let { append("&container=").append(KubeNames.container(it)) }
-        }
-        return getOk("${podPath(namespace, name)}/log$query").lineSequence().filter { it.isNotEmpty() }.map(::logLine).toList()
+        return getOk(logPath(namespace, name, container, tailLines, follow = false)).lineSequence().filter { it.isNotEmpty() }.map(::logLine).toList()
+    }
+
+    override suspend fun followPodLogs(namespace: String, name: String, container: String?, tailLines: Int, onLine: suspend (LogLine) -> Unit) {
+        // 0 is allowed here: following from now on without history is a sensible request.
+        if (tailLines !in 0..MAX_TAIL) throw KubeException("tailLines must be in 0..$MAX_TAIL")
+        http.streamLines(logPath(namespace, name, container, tailLines, follow = true)) { if (it.isNotEmpty()) onLine(logLine(it)) }
+    }
+
+    private fun logPath(namespace: String, name: String, container: String?, tailLines: Int, follow: Boolean) = buildString {
+        append(podPath(namespace, name)).append("/log?timestamps=true&tailLines=").append(tailLines)
+        if (follow) append("&follow=true")
+        container?.let { append("&container=").append(KubeNames.container(it)) }
     }
 
     override fun pod(namespace: String, name: String): KubePod = KubeJson.pod(getOk(podPath(namespace, name)))

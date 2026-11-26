@@ -2,6 +2,7 @@ package controllima.providers.kube
 
 import controllima.shared.KubeCluster
 import controllima.shared.LogLine
+import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -23,6 +24,14 @@ class HttpKubeClientTest {
         override fun delete(path: String): KubeResponse {
             deletes += path
             return routes["DELETE $path"] ?: KubeResponse(200, "{}")
+        }
+
+        val streams = mutableListOf<String>()
+
+        override suspend fun streamLines(path: String, onLine: suspend (String) -> Unit) {
+            streams += path
+            val response = routes[path] ?: throw KubeApiException(404, "not found")
+            response.body.split('\n').forEach { onLine(it) }
         }
 
         val forwards = mutableListOf<String>()
@@ -143,6 +152,19 @@ class HttpKubeClientTest {
         assertFailsWith<KubeException> { client.podLogs("default", "web-5d9c", null, 0) }
         assertFailsWith<KubeException> { client.podLogs("default", "web-5d9c", null, 1_000_000) }
         assertEquals(listOf(path), http.gets)
+    }
+
+    @Test
+    fun `followed pod logs stream parsed lines from a follow request`() = runBlocking {
+        val path = "/api/v1/namespaces/default/pods/web-b/log?timestamps=true&tailLines=0&follow=true&container=app"
+        val http = FakeHttp(mapOf(path to KubeResponse(200, "2026-11-26T10:00:01Z listening on :8080\n\nno timestamp\n")))
+        val client = HttpKubeClient(http)
+        val lines = mutableListOf<LogLine>()
+        client.followPodLogs("default", "web-b", "app", 0) { lines += it }
+        assertEquals(listOf(LogLine(1795687201000, "stdout", "listening on :8080"), LogLine(null, "stdout", "no timestamp")), lines)
+        assertFailsWith<KubeException> { client.followPodLogs("default", "web-b", null, -1) {} }
+        assertFailsWith<KubeException> { client.followPodLogs("default", "web-b", "app&x=1", 10) {} }
+        assertEquals(listOf(path), http.streams)
     }
 
     @Test

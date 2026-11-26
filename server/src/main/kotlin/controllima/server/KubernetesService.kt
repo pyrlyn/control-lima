@@ -61,6 +61,12 @@ class KubernetesService(
         return withContext(Dispatchers.IO) { client(target).podLogs(namespace, pod, container, tail) }
     }
 
+    /** Suspends while the pod's log is followed; returns when the API ends the stream. */
+    suspend fun followPodLogs(id: String, namespace: String, pod: String, container: String?, tail: Int, onLine: suspend (LogLine) -> Unit) {
+        val target = availableTarget(id)
+        client(target).followPodLogs(namespace, pod, container, tail, onLine)
+    }
+
     suspend fun deletePod(id: String, namespace: String, pod: String) {
         val target = availableTarget(id)
         withContext(Dispatchers.IO) { client(target).deletePod(namespace, pod) }

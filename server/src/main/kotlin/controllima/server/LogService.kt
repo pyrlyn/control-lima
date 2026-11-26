@@ -12,7 +12,11 @@ import controllima.shared.Targets
 import controllima.shared.Vm
 import controllima.shared.VmSource
 import controllima.shared.VmStatus
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -145,11 +149,15 @@ class LogService(
         val out = Channel<LogLine>(capacity = 10_000)
         val handle: Closeable = when (p.kind) {
             "docker" -> openDocker(p.target, n, onEnd = { out.close() }) { out.trySend(it) }
-            // The API's follow mode needs a long-lived request the KubeClient does not offer yet: send the tail and end.
             "pod" -> {
-                withContext(Dispatchers.IO) { podLines(p, n.coerceAtLeast(1)) }.forEach { out.trySend(it) }
-                out.close()
-                Closeable { }
+                val (cluster, ns, pod) = KubeRoutes.parsePodTarget(p.target) ?: notFound("Unknown pod")
+                val k = kube ?: notFound("Kubernetes is not available")
+                // A child of the caller, so a closed log view also closes the API request.
+                val job = CoroutineScope(currentCoroutineContext()).launch(Dispatchers.IO) {
+                    val failure = runCatching { k.followPodLogs(cluster, ns, pod, p.file, n.coerceAtMost(10_000)) { out.send(it) } }.exceptionOrNull()
+                    out.close(failure?.takeUnless { it is CancellationException })
+                }
+                Closeable { job.cancel() }
             }
             "journal", "cloud-init" -> {
                 val vm = vmOf(p.target)

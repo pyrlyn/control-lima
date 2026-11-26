@@ -12,14 +12,22 @@ import io.ktor.client.request.bearerAuth
 import io.ktor.client.request.delete
 import io.ktor.client.request.get
 import io.ktor.client.request.header
+import io.ktor.client.request.prepareGet
 import io.ktor.client.statement.HttpResponse
+import io.ktor.client.statement.bodyAsChannel
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.HttpHeaders
 import io.ktor.network.tls.addCertificateChain
 import io.ktor.websocket.Frame
 import io.ktor.websocket.WebSocketSession
 import io.ktor.websocket.close
+import io.ktor.utils.io.readUTF8Line
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 
@@ -56,8 +64,8 @@ class KtorKubeHttp(access: KubeAccess, timeoutMillis: Long = 5_000) : KubeHttp {
         }
     }
 
-    // A forwarded connection may stay idle for hours, so this client has no request or socket timeout;
-    // only the handshake is bounded, in [portForward].
+    // Forwarded connections and followed logs may stay idle for hours, so this client has no request or
+    // socket timeout; only the wait for the server's answer is bounded, in [portForward] and [streamLines].
     private val streamsClient = lazy {
         HttpClient(CIO) {
             tls()
@@ -69,6 +77,32 @@ class KtorKubeHttp(access: KubeAccess, timeoutMillis: Long = 5_000) : KubeHttp {
     override fun get(path: String): KubeResponse = call { client.get(base + path) { headers() } }
 
     override fun delete(path: String): KubeResponse = call { client.delete(base + path) { headers() } }
+
+    override suspend fun streamLines(path: String, onLine: suspend (String) -> Unit) {
+        val headers = CompletableDeferred<Unit>()
+        try {
+            coroutineScope {
+                // The stream itself may stay quiet for hours; only the wait for the response headers is bounded.
+                val watchdog = launch {
+                    delay(HANDSHAKE_MILLIS)
+                    if (!headers.isCompleted) throw KubeException("$base did not answer in time")
+                }
+                streamsClient.value.prepareGet(base + path) { headers() }.execute { response ->
+                    headers.complete(Unit)
+                    watchdog.cancel()
+                    if (response.status.value !in 200..299) {
+                        val body = response.bodyAsText()
+                        throw KubeApiException(response.status.value, KubeJson.statusMessage(body) ?: "Kubernetes API returned HTTP ${response.status.value}")
+                    }
+                    val channel = response.bodyAsChannel()
+                    while (true) onLine(channel.readUTF8Line() ?: break)
+                }
+            }
+        } catch (e: Exception) {
+            if (e is CancellationException || e is KubeException || e is KubeApiException) throw e
+            throw KubeException("log stream from $base failed: ${e.message ?: e::class.simpleName}", e)
+        }
+    }
 
     override suspend fun portForward(path: String): KubePortStream = try {
         val session = withTimeout(HANDSHAKE_MILLIS) {
