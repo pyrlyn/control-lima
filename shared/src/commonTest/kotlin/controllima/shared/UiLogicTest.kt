@@ -82,4 +82,11 @@ class UiLogicTest {
         val csv = ChartMath.csv(listOf(MetricSeries("vm:lima/a", Metric.CPU, 2000, listOf(MetricPoint(1, 2.0, 3.0)))))
         assertEquals("target,metric,time_ms,avg,max,p95\nvm:lima/a,cpu,1,2.0,3.0,\n", csv)
     }
+
+    @Test
+    fun csvCellQuotesAndDefusesFormulas() {
+        assertEquals("\"a,b\"", Format.csvCell("a,b"))
+        assertEquals("\"say \"\"hi\"\"\"", Format.csvCell("say \"hi\""))
+        assertEquals("\"'=cmd()\"", Format.csvCell("=cmd()"))
+    }
 }

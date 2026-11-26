@@ -13,6 +13,12 @@ import kotlin.math.roundToLong
  * tested on the JVM and reused by the web UI and the CLI.
  */
 object Format {
+    /** One quoted CSV cell; a leading formula character is defused because cells hold user-typed names. */
+    fun csvCell(value: String): String {
+        val safe = if (value.firstOrNull() in setOf('=', '+', '-', '@')) "'$value" else value
+        return "\"" + safe.replace("\"", "\"\"") + "\""
+    }
+
     fun bytes(value: Long?, units: SizeUnits = SizeUnits.BINARY): String {
         if (value == null) return "—"
         val base = if (units == SizeUnits.BINARY) 1024.0 else 1000.0
@@ -67,15 +73,6 @@ object Format {
         VmStatus.BROKEN -> "Broken"
         VmStatus.UNRESPONSIVE -> "Unresponsive"
         VmStatus.UNKNOWN -> "Unknown"
-    }
-
-    /** Text icon so status is never shown by color alone. */
-    fun statusIcon(status: VmStatus): String = when (status) {
-        VmStatus.RUNNING -> "●"
-        VmStatus.STOPPED -> "○"
-        VmStatus.BROKEN -> "✕"
-        VmStatus.UNRESPONSIVE -> "⚠"
-        VmStatus.UNKNOWN -> "?"
     }
 
     fun oneDecimal(v: Double): String {

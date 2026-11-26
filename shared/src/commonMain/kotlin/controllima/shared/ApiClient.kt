@@ -140,6 +140,12 @@ class ApiClient(private val transport: HttpTransport, var token: String) {
     private fun forceQuery(ref: VmRef, force: Boolean) = if (!force) "" else if (ref.home == null) "?force=true" else "&force=true"
     private fun <T> encode(serializer: kotlinx.serialization.KSerializer<T>, value: T) = ApiJson.encodeToString(serializer, value)
 
+    /** Headers for a write the client cannot make itself (browser file upload); loads the CSRF token first. */
+    suspend fun writeHeaders(): Map<String, String> {
+        if (csrfToken == null) session()
+        return headers(write = true) - "Content-Type"
+    }
+
     private fun headers(write: Boolean, csrf: Boolean = true): Map<String, String> = buildMap {
         if (token.isNotEmpty()) put(ApiRoutes.TOKEN_HEADER, token)
         if (write && csrf) csrfToken?.let { put(ApiRoutes.CSRF_HEADER, it) }
