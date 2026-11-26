@@ -229,6 +229,7 @@ object LimaJson {
             dir = str("dir"),
             sshConfigFile = str("sshConfigFile"),
             mounts = mounts,
+            hostPid = long("driverPID")?.takeIf { it > 0 } ?: long("hostAgentPID")?.takeIf { it > 0 },
         )
     }
 
@@ -237,12 +238,6 @@ object LimaJson {
         "Stopped" -> VmStatus.STOPPED
         "Broken" -> VmStatus.BROKEN
         else -> VmStatus.UNKNOWN
-    }
-
-    /** Host-side PID of the VM (hostagent for VZ, QEMU otherwise), for host CPU/RSS. */
-    fun driverPid(line: String): Long? {
-        val o = json.parseToJsonElement(line).jsonObject
-        return o.long("driverPID")?.takeIf { it > 0 } ?: o.long("hostAgentPID")?.takeIf { it > 0 }
     }
 
     /** Guest addresses from `ip -j addr` (JSON), excluding loopback and link-local. */

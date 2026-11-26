@@ -85,12 +85,14 @@ object Metric {
     const val DISK_WRITE = "disk_write"
     const val DISK_USED = "disk_used"
     const val DISK_PERCENT = "disk_percent"
+    const val DISK_TOTAL = "disk_total"
     const val LOAD = "load"
     const val PROBE_LATENCY = "probe_latency"
     const val HOST_CPU = "host_cpu"
     const val HOST_RSS = "host_rss"
 
-    val all = listOf(CPU, MEMORY, MEMORY_PERCENT, NET_RX, NET_TX, DISK_READ, DISK_WRITE, DISK_USED, DISK_PERCENT, LOAD, PROBE_LATENCY, HOST_CPU, HOST_RSS)
+    /** Order is persisted by the metrics store: append new keys at the end. */
+    val all = listOf(CPU, MEMORY, MEMORY_PERCENT, NET_RX, NET_TX, DISK_READ, DISK_WRITE, DISK_USED, DISK_PERCENT, LOAD, PROBE_LATENCY, HOST_CPU, HOST_RSS, DISK_TOTAL)
 
     /** Values of [sample] keyed by metric. Missing values are left out. */
     fun valuesOf(sample: StatsSample): Map<String, Double> = buildMap {
@@ -103,6 +105,7 @@ object Metric {
         sample.diskWriteBytesPerSec?.let { put(DISK_WRITE, it) }
         sample.diskUsedBytes?.let { put(DISK_USED, it.toDouble()) }
         sample.diskPercent?.let { put(DISK_PERCENT, it) }
+        sample.diskTotalBytes?.let { put(DISK_TOTAL, it.toDouble()) }
         sample.load1?.let { put(LOAD, it) }
         sample.probeLatencyMs?.let { put(PROBE_LATENCY, it) }
         sample.hostCpuPercent?.let { put(HOST_CPU, it) }
@@ -111,7 +114,7 @@ object Metric {
 
     fun unit(metric: String): Unit = when (metric) {
         CPU, MEMORY_PERCENT, DISK_PERCENT, HOST_CPU -> Unit.PERCENT
-        MEMORY, DISK_USED, HOST_RSS -> Unit.BYTES
+        MEMORY, DISK_USED, DISK_TOTAL, HOST_RSS -> Unit.BYTES
         NET_RX, NET_TX, DISK_READ, DISK_WRITE -> Unit.BYTES_PER_SEC
         PROBE_LATENCY -> Unit.MILLIS
         else -> Unit.NONE
@@ -286,7 +289,14 @@ data class BackupDiff(val target: String, val lines: List<DiffLine>, val current
 data class RestoreRequest(val targets: List<String>, val confirmName: String, val newName: String? = null)
 
 @Serializable
-data class RestoreResult(val restored: List<String>, val restartRequired: List<String> = emptyList(), val created: List<String> = emptyList())
+data class RestoreResult(
+    val restored: List<String>,
+    val restartRequired: List<String> = emptyList(),
+    val created: List<String> = emptyList(),
+    /** Set when a VM is being created from the backup (`limactl create`), which runs as an action. */
+    val actionId: String? = null,
+    val notes: List<String> = emptyList(),
+)
 
 @Serializable
 data class BackupSchedule(val enabled: Boolean = false, val everyDays: Int = 1, val keep: Int = 7)
@@ -346,7 +356,15 @@ data class DiskReport(
 )
 
 @Serializable
-data class CleanupSuggestion(val id: String, val title: String, val bytes: Long?, val items: List<String> = emptyList(), val note: String? = null)
+data class CleanupSuggestion(
+    val id: String,
+    val title: String,
+    val bytes: Long?,
+    val items: List<String> = emptyList(),
+    val note: String? = null,
+    /** What the user types to confirm; null means the suggestion is informational only. */
+    val confirm: String? = null,
+)
 
 @Serializable
 data class CleanupRequest(val id: String, val confirmName: String, val profile: String? = null)
@@ -408,3 +426,18 @@ data class AboutInfo(
 
 @Serializable
 data class SettingsResponse(val settings: Settings, val about: AboutInfo)
+
+// ---------- WebSocket messages ----------
+
+/** Client → `/ws/stats`: change the watched targets. */
+@Serializable
+data class StatsSubscription(val subscribe: List<String> = emptyList(), val unsubscribe: List<String> = emptyList())
+
+/** Server → `/ws/stats`: the buffered history of newly watched targets first (`history = true`), then live samples. */
+@Serializable
+data class StatsBatch(val samples: List<StatsSample>, val history: Boolean = false)
+
+/** Server → `/ws/logs`: lines in small batches; [error] ends the stream. */
+@Serializable
+data class LogBatch(val lines: List<LogLine> = emptyList(), val error: String? = null)
+

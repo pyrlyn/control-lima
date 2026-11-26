@@ -64,7 +64,7 @@ interface DockerProvider {
     fun networks(): List<NetworkInfo> = emptyList()
     fun pruneContainers(dryRun: Boolean): PruneResult = unsupported()
     fun pruneBuildCache(): Long = unsupported()
-    fun logs(id: String, tail: Int, follow: Boolean, sinceSeconds: Long?, onLine: (LogLine) -> Unit): Closeable = unsupported()
+    fun logs(id: String, tail: Int, follow: Boolean, sinceSeconds: Long?, onEnd: () -> Unit = {}, onLine: (LogLine) -> Unit): Closeable = unsupported()
 
     private fun unsupported(): Nothing = throw UnsupportedOperationException("not supported by this DockerProvider")
 }
@@ -153,7 +153,7 @@ class DockerEngineProvider(
 
     override fun networks(): List<NetworkInfo> = DockerJson.parseNetworks(transport.get("/networks"))
 
-    override fun logs(id: String, tail: Int, follow: Boolean, sinceSeconds: Long?, onLine: (LogLine) -> Unit): Closeable {
+    override fun logs(id: String, tail: Int, follow: Boolean, sinceSeconds: Long?, onEnd: () -> Unit, onLine: (LogLine) -> Unit): Closeable {
         val tty = runCatching { inspectTty(id) }.getOrDefault(false)
         val path = "/containers/${ref(id)}/logs?stdout=1&stderr=1&timestamps=1&tail=${tail.coerceIn(0, 50_000)}&follow=$follow" +
             (sinceSeconds?.let { "&since=$it" } ?: "")
@@ -165,6 +165,7 @@ class DockerEngineProvider(
         val reader = Thread({
             runCatching { DockerLogDecoder.decode(stream.input, tty, onLine) }
             runCatching { stream.close() }
+            onEnd()
         }, "docker-logs").apply { isDaemon = true; start() }
         return Closeable { runCatching { stream.close() }; reader.interrupt() }
     }

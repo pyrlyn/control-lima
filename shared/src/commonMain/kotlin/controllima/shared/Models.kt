@@ -51,6 +51,8 @@ data class Vm(
     val unresponsiveSinceMillis: Long? = null,
     val mounts: List<String> = emptyList(),
     val message: String? = null,
+    /** Host process of the VM (VZ host agent or QEMU), for host CPU/RSS and port ownership. */
+    val hostPid: Long? = null,
 ) {
     val ref: VmRef get() = VmRef(source, name, home)
 }
