@@ -1,0 +1,5 @@
+{"LayersSize":1300000000,
+ "Images":[{"Id":"sha256:aaa","Size":1234567890,"SharedSize":0,"Containers":1},{"Id":"sha256:bbb","Size":1000,"SharedSize":0,"Containers":0}],
+ "Containers":[{"Id":"x","SizeRw":500,"State":"running"},{"Id":"y","SizeRw":300,"State":"exited"}],
+ "Volumes":[{"Name":"v1","UsageData":{"Size":2048,"RefCount":0}},{"Name":"v2","UsageData":{"Size":4096,"RefCount":1}}],
+ "BuildCache":[{"ID":"c1","Size":7000,"InUse":false},{"ID":"c2","Size":1000,"InUse":true}]}

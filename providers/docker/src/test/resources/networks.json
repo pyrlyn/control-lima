@@ -1,0 +1,1 @@
+[{"Name":"bridge","Driver":"bridge","IPAM":{"Config":[{"Subnet":"172.17.0.0/16","Gateway":"172.17.0.1"}]}},{"Name":"host","Driver":"host","IPAM":{"Config":[]}}]

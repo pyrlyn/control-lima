@@ -81,6 +81,7 @@ data class Container(
     val createdEpochSeconds: Long? = null,
     val profile: String = "default",
     val labels: Map<String, String> = emptyMap(),
+    val imageId: String? = null,
 ) {
     val targetId: String get() = Targets.container(profile, id)
     val running: Boolean get() = state == "running"
