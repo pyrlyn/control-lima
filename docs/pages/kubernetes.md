@@ -42,8 +42,9 @@ open and total connections, bytes each way, the last connection error.
 `providers/kube` for kubeconfig parsing and the HTTPS client. Clusters are found from files only:
 `~/.kube/config` contexts `colima` / `colima-<profile>` for Colima profiles whose runtime contains `k3s`,
 and `<instance>/copied-from-guest/kubeconfig.yaml` for Lima VMs. Exec and auth-provider users and
-`insecure-skip-tls-verify` are refused. Pod logs are a tail (up to 10 000 lines); live follow is not
-implemented yet, so the Logs page shows the tail and stops. Node-port services also appear on the Ports
+`insecure-skip-tls-verify` are refused. Pod logs open with up to 10 000 lines of
+history and then follow live over one long-lived `follow=true` request to the API server; closing the
+log view closes that request, and an API error or the end of the stream is shown in the view. Node-port services also appear on the Ports
 page as "k8s service" rows on 127.0.0.1, because Lima forwards them to the host.
 
 Port forwards (v2.1): `PortForwardService` on the server owns the listeners; `KubernetesService` checks the
