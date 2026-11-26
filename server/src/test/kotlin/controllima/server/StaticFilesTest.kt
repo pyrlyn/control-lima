@@ -15,6 +15,7 @@ class StaticFilesTest {
         web.resolve("index.html").writeText("<html></html>")
         web.resolve("controlLima.js").writeText("js")
         web.resolve("0123abcd.wasm").writeText("wasm")
+        web.resolve("composeResources/controllima.web.resources/font").createDirectories().resolve("ibm_plex_mono_regular.ttf").writeText("ttf")
         StaticFiles(URLClassLoader(arrayOf(root.toUri().toURL()), null))
     }
 
@@ -31,6 +32,12 @@ class StaticFilesTest {
         assertEquals("no-cache", files.serve("/controlLima.js")!!.headers["Cache-Control"])
         assertEquals("no-cache", files.serve("/")!!.headers["Cache-Control"])
         assertEquals("max-age=3600", files.serve("/0123abcd.wasm")!!.headers["Cache-Control"])
+    }
+
+    @Test
+    fun bundledFontsAreServedAsFonts() {
+        val r = files.serve("/composeResources/controllima.web.resources/font/ibm_plex_mono_regular.ttf")!!
+        assertEquals("font/ttf", r.contentType)
     }
 
     @Test

@@ -771,6 +771,7 @@ class StaticFiles(private val loader: ClassLoader = StaticFiles::class.java.clas
             "html" to "text/html; charset=utf-8", "js" to "text/javascript; charset=utf-8", "mjs" to "text/javascript; charset=utf-8",
             "wasm" to "application/wasm", "css" to "text/css; charset=utf-8", "json" to "application/json", "svg" to "image/svg+xml",
             "png" to "image/png", "ico" to "image/x-icon", "map" to "application/json", "txt" to "text/plain; charset=utf-8",
+            "ttf" to "font/ttf",
         )
     }
 }
