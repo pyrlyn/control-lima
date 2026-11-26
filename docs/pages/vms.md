@@ -23,3 +23,6 @@ Filters: source, status, text search. Sort by any column.
 
 ## API
 `GET /api/vms`, `POST /api/vms/{source}/{name}/start|stop`, `DELETE /api/vms/{source}/{name}`, `POST .../rename` (v1), `WS /ws/stats`, `WS /ws/events`.
+
+## Implementation
+`VmsPage` in `web/.../VmPages.kt`; sorting and filtering use `VmTable` from `shared/`. Row actions are the shared `VmActions` (start, stop, force stop, logs, rename, clone, back up, delete).

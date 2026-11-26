@@ -19,3 +19,6 @@ Start, stop, restart (operator); rename (operator); delete (admin, confirm); log
 
 ## API
 `GET /api/containers?profile=`, `POST /api/containers/{id}/start|stop|restart|rename`, `DELETE /api/containers/{id}`, `WS /ws/stats`.
+
+## Implementation
+`ContainersPage` in `web/.../DockerPages.kt`. A stopped Colima profile shows an explicit Start Colima button. On a Docker error the last known list stays visible, greyed.

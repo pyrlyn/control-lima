@@ -19,3 +19,6 @@ Open in browser, copy, jump to owner, filter by owner/port.
 
 ## API
 `GET /api/ports`, `GET /api/vms`, `GET /api/containers`.
+
+## Implementation
+`PortsPage` in `web/.../OpsPages.kt`. Also reads `GET /api/networks`. Conflicts are highlighted rows with a warning mark; owners link to their detail page.

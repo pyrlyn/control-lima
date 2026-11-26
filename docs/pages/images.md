@@ -19,3 +19,6 @@ Pull (operator, v1), delete (admin, v1, refuses in-use), prune with dry-run prev
 
 ## API
 `GET /api/images?profile=`, `DELETE /api/images/{id}`, `POST /api/images/prune`, `POST /api/images/pull`, `GET /api/disk`.
+
+## Implementation
+`ImagesPage` in `web/.../DockerPages.kt`. Pull validates the reference with `Names.isValidImageRef` (shared with the server). Prune runs as a dry run first and then needs the typed word `prune`.

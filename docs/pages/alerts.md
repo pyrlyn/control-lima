@@ -19,3 +19,6 @@ Acknowledge (operator), silence (operator), create/edit/delete rule (admin), con
 
 ## API
 `GET/POST/PUT/DELETE /api/alerts/rules`, `GET /api/alerts/events`, `POST /api/alerts/{id}/ack`, `GET/PUT /api/notifications/channels`, `POST /api/notifications/test`, `WS /ws/events`.
+
+## Implementation
+`AlertsPage` in `web/.../OpsPages.kt`, tabs Firing, History, Rules, Channels. Silence uses `POST /api/alerts/rules/{id}/silence`. A VM-down alert offers Start VM, which runs only on that click.

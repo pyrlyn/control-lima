@@ -19,3 +19,6 @@ Confirm (enabled only when the typed text equals the name exactly), cancel (Esc)
 
 ## API
 Whatever the calling action uses; the body always carries `confirmName`.
+
+## Implementation
+`ConfirmDialog` in `web/.../Ui.kt`, shared by every destructive action. Confirm stays disabled until the typed text matches exactly (`Confirm.matches` from `shared/`); protected names show a blocking banner instead of the input. Esc closes the dialog.

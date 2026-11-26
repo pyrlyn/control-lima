@@ -24,3 +24,6 @@ The landing page: health of everything at a glance and the shortest path to a pr
 
 ## API
 `GET /api/vms`, `GET /api/containers`, `GET /api/images`, `WS /ws/stats`, `WS /ws/events`, `GET /api/alerts/events` (v1).
+
+## Implementation
+`OverviewPage` in `web/.../VmPages.kt`. Counters link to the filtered lists; stopped VMs get an explicit Start button only (never started automatically). Host section reads `GET /api/disk`.

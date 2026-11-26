@@ -19,3 +19,6 @@ Back up now (operator), schedule (admin), download/upload archive (admin), resto
 
 ## API
 `GET/POST /api/backups`, `GET /api/backups/{id}/diff`, `POST /api/backups/{id}/restore`, `GET /api/backups/{id}/download`.
+
+## Implementation
+`BackupsPage` in `web/.../ManagePages.kt`. Back up now scans for secrets first (`POST /api/backups/scan`) and needs a second click if any are found and redaction is off. Upload uses `POST /api/backups/import`; download sends the token header, so it goes through an authorized request rather than a plain link. The schedule is saved with `PUT /api/settings`. A restore of several targets confirms with the backup id; a protected VM can only be restored under a new name.

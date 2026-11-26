@@ -24,3 +24,6 @@ Start, stop, delete (confirm), rename (v1), back up (v1), restore (v1), open she
 
 ## API
 `GET /api/vms/{source}/{name}`, actions under `/api/vms/{source}/{name}/…`, `GET /api/metrics` (v1), `WS /ws/stats`, `GET /api/logs/sources` (v1).
+
+## Implementation
+`VmDetailPage` in `web/.../VmPages.kt`, tabs Summary, Charts, Config, Logs, Backups, Alerts. Charts use `GET /api/metrics` for 1 h to 30 d and the live window from `WS /ws/stats` for 15 min; table view and CSV export use `ChartMath` from `shared/`.

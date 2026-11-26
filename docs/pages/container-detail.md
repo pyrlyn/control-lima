@@ -19,3 +19,6 @@ Start, stop, restart, rename, delete (confirm), open port in browser, reveal an 
 
 ## API
 `GET /api/containers/{id}`, container actions, `WS /ws/stats`, `WS /ws/logs`.
+
+## Implementation
+`ContainerDetailPage` in `web/.../DockerPages.kt`, tabs Summary, Charts, Logs. Masked environment values are revealed one at a time by an admin (`POST /api/containers/{id}/reveal`, audited).
