@@ -465,7 +465,7 @@ class Api(private val s: Services, private val static: StaticFiles = StaticFiles
         post("${ApiRoutes.IMAGES}/pull", Role.OPERATOR) {
             val profile = profile()
             val ref = decode(request, PullRequest.serializer()).ref.trim()
-            if (!IMAGE_REF.matches(ref)) badRequest("Invalid image reference")
+            if (!controllima.shared.Names.isValidImageRef(ref)) badRequest("Invalid image reference")
             val docker = docker(profile)
             accepted(s.actions.launch("image.pull", "images:$profile/$ref", principal, mapOf("ref" to ref)) { progress ->
                 docker.pull(ref, progress)
@@ -729,7 +729,6 @@ class Api(private val s: Services, private val static: StaticFiles = StaticFiles
         const val MASK = "•••"
         private const val MAX_BODY = 1 shl 20
         private const val MAX_WS_TARGETS = 200
-        private val IMAGE_REF = Regex("^[a-zA-Z0-9][a-zA-Z0-9._/:@-]{0,255}$")
         private val IMAGE_ID = Regex("^(sha256:)?[a-f0-9]{6,64}$")
     }
 }

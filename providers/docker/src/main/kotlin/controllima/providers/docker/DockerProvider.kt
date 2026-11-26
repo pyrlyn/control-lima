@@ -135,7 +135,7 @@ class DockerEngineProvider(
     }
 
     override fun pull(ref: String, onLine: (String) -> Unit) {
-        if (!IMAGE_REF.matches(ref)) throw DockerException("Invalid image reference: $ref")
+        if (!Names.isValidImageRef(ref)) throw DockerException("Invalid image reference: $ref")
         val (image, tag) = splitRef(ref)
         transport.stream("POST", "/images/create?fromImage=${enc(image)}&tag=${enc(tag)}").use { stream ->
             if (stream.status !in 200..299) throw DockerException("Pull of $ref returned ${stream.status}")
@@ -183,8 +183,6 @@ class DockerEngineProvider(
     }
 
     companion object {
-        private val IMAGE_REF = Regex("^[a-zA-Z0-9][a-zA-Z0-9._/:@-]{0,254}$")
-
         fun enc(value: String): String = URLEncoder.encode(value, Charsets.UTF_8)
 
         /** `repo:tag` → (repo, tag); digests and registry ports are kept intact. */

@@ -105,8 +105,11 @@ object Names {
     private val limaName = Regex("^[a-zA-Z0-9][a-zA-Z0-9_.-]*$")
     private val containerName = Regex("^[a-zA-Z0-9][a-zA-Z0-9_.-]*$")
     private val containerId = Regex("^[a-f0-9]{6,64}$")
+    // Docker references: registry/name:tag or @digest; no spaces or shell characters.
+    private val imageRef = Regex("^[a-zA-Z0-9][a-zA-Z0-9._/:@-]{0,254}$")
 
     fun isValidVmName(name: String): Boolean = name.length <= 64 && limaName.matches(name)
     fun isValidContainerName(name: String): Boolean = name.length <= 128 && containerName.matches(name)
     fun isValidContainerRef(ref: String): Boolean = containerId.matches(ref) || isValidContainerName(ref)
+    fun isValidImageRef(ref: String): Boolean = imageRef.matches(ref)
 }
