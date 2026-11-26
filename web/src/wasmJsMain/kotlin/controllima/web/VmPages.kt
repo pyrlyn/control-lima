@@ -363,7 +363,9 @@ enum class Range(val label: String, val millis: Long) {
 
 @Composable
 fun VmDetailPage(m: AppModel, ref: VmRef) {
-    val detail = load(ref, m.vmsAt / 15_000) { m.api.vm(ref) }
+    // Refreshed in place: a changing key would drop the loaded detail and, with it, the open tab's state
+    // (an unsaved config edit, a terminal session).
+    val detail = load(ref, everyMillis = 15_000) { m.api.vm(ref) }
     var tab by remember { mutableStateOf(0) }
     val d = detail.value
     if (d == null) {
