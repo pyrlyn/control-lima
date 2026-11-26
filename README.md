@@ -8,8 +8,8 @@ Status: **MVP, v1 and v2 implemented**, not released yet. Everything in [docs/pl
 is in place: inventory, live load over WebSocket, actions with type-to-confirm, charts and history, alerts
 and notifications, logs, templates, backups and restore, tokens, users and the audit log; and from v2:
 Kubernetes, nerdctl containers in Lima VMs, snapshots, `lima.yaml` editing, SQLite metrics, the opt-in web
-terminal, read-only remote hosts over SSH and the desktop app. Deferred: port forwarding (v2.1), a signed
-DMG and a native binary (see [packaging](docs/plan/packaging-updates.md)).
+terminal, read-only remote hosts over SSH and the desktop app; and Kubernetes port forwarding (v2.1).
+Deferred: a signed DMG and a native binary (see [packaging](docs/plan/packaging-updates.md)).
 
 ## Quick start
 

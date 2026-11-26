@@ -22,6 +22,9 @@ ControlLima can delete VMs and containers, so the main threats are:
 - **Confirm by typing the name** for delete, restore, prune, VM rename.
 - **Protected names** (default `infra-test`) can never be deleted; checked on the server, not only in UI.
 - **No automatic VM start**, ever; alerts and templates only offer buttons.
+- **Kubernetes port forwards** (v2.1) listen on 127.0.0.1 only, need the operator role, refuse local ports
+  below 1024 and bind without `SO_REUSEADDR`, so a forward can never sit under another process's listener.
+  They are in memory only: a restart forwards nothing until someone asks again.
 - **No shell injection:** commands are argument lists, VM names validated against Lima's name regex
   (`^[a-zA-Z0-9][a-zA-Z0-9_.-]*$`) before use.
 - **Secrets**: redacted in API responses (env vars in container inspect shown as `KEY=•••` unless admin

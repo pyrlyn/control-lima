@@ -5,4 +5,5 @@
   Ktor client (approved) — no kubectl parsing, no new k8s client library without approval.
 - Views: nodes, namespaces, pods (status, restarts, CPU/memory from metrics-server if present), services
   and their node ports in the Ports page, pod logs in the Logs page.
-- Actions: delete pod (restart), port-forward (v2.1).
+- Actions: delete pod (restart), port-forward (v2.1, done): a listener on 127.0.0.1 per forward, each local
+  connection carried to the pod over the API's `pods/portforward` WebSocket (`v4.channel.k8s.io`), no kubectl.
