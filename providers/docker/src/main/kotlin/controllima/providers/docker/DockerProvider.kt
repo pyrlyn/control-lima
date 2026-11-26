@@ -331,6 +331,8 @@ object DockerJson {
     private data class InspectDto(
         @SerialName("Id") val id: String,
         @SerialName("Name") val name: String = "",
+        /** Docker puts the image ID here; nerdctl puts the reference and leaves `Config.Image` empty. */
+        @SerialName("Image") val image: String? = null,
         @SerialName("Created") val created: String? = null,
         @SerialName("RestartCount") val restartCount: Int = 0,
         @SerialName("State") val state: StateDto = StateDto(),
@@ -381,6 +383,11 @@ object DockerJson {
 
     fun parseTty(body: String): Boolean = json.decodeFromString(InspectDto.serializer(), body).config.tty
 
+    /** The CLI form (`docker inspect`, `nerdctl inspect`): an array of Engine API inspect objects. */
+    fun parseInspectList(body: String, profile: String): List<ContainerDetail> =
+        (json.parseToJsonElement(body) as? kotlinx.serialization.json.JsonArray ?: throw DockerException("Expected a JSON array from inspect"))
+            .map { parseInspect(it.toString(), profile) }
+
     fun parseInspect(body: String, profile: String = "default"): ContainerDetail {
         val i = json.decodeFromString(InspectDto.serializer(), body)
         val ports = i.networkSettings.ports.flatMap { (key, bindings) ->
@@ -393,7 +400,7 @@ object DockerJson {
             container = Container(
                 id = i.id,
                 name = i.name.removePrefix("/"),
-                image = i.config.image,
+                image = i.config.image.ifEmpty { i.image.orEmpty() },
                 state = i.state.status,
                 status = i.state.status,
                 ports = ports,

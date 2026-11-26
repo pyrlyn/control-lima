@@ -5,6 +5,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import controllima.shared.Names
 import controllima.shared.ActionState
 import controllima.shared.AlertEvent
 import controllima.shared.AlertState
@@ -86,6 +87,8 @@ class AppModel(val api: ApiClient, val scope: CoroutineScope) {
     var vmsError by mutableStateOf<String?>(null)
     var vmsAt by mutableStateOf(0L)
     var containerLists by mutableStateOf<Map<String, ContainerList>>(emptyMap())
+    /** From the server: Colima profiles plus `lima:<vm>` for Lima VMs that have nerdctl. */
+    var containerProfiles by mutableStateOf<List<String>>(emptyList())
     var firing by mutableStateOf<List<AlertEvent>>(emptyList())
     var units by mutableStateOf(SizeUnits.BINARY)
     var theme by mutableStateOf(Theme.SYSTEM)
@@ -215,6 +218,7 @@ class AppModel(val api: ApiClient, val scope: CoroutineScope) {
             vms = api.vms()
             vmsError = null
             vmsAt = Clock.now()
+            runCatching { api.containerProfiles() }.onSuccess { containerProfiles = it }
         } catch (e: ApiException) {
             vmsError = e.message
             if (e.status == 401) authProblem = AuthProblem.MISSING_TOKEN
@@ -227,11 +231,16 @@ class AppModel(val api: ApiClient, val scope: CoroutineScope) {
         }
     }
 
-    /** Colima profiles known from the VM list (each Colima VM is a profile) plus settings. */
+    /** Container profiles: Colima ones first (each Colima VM is a profile), then nerdctl `lima:<vm>` ones. */
     fun profiles(): List<String> {
         val fromVms = vms?.vms.orEmpty().filter { it.source == VmSource.COLIMA }.map { it.name }
-        return (fromVms + containerLists.keys).distinct().ifEmpty { listOf("default") }
+        val all = (fromVms + containerProfiles + containerLists.keys).distinct()
+        val (lima, colima) = all.partition { it.startsWith(Names.NERDCTL_PREFIX) }
+        return (colima.ifEmpty { listOf("default") }) + lima
     }
+
+    /** Profiles with a Docker daemon; images, pulls and pruning exist only there. */
+    fun dockerProfiles(): List<String> = profiles().filterNot { it.startsWith(Names.NERDCTL_PREFIX) }
 
     suspend fun refreshContainers(profile: String): ContainerList {
         val list = api.containers(profile)

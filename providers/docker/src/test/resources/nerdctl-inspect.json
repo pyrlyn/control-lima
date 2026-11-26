@@ -1,0 +1,53 @@
+[
+  {
+    "Id": "3f6c2a9d1e4b7c8a0f2d5e6b9a1c3d4e5f60718293a4b5c6d7e8f9a0b1c2d3e4",
+    "Created": "2026-11-20T09:15:02.123456789Z",
+    "Path": "/docker-entrypoint.sh",
+    "Args": ["nginx", "-g", "daemon off;"],
+    "State": {
+      "Status": "running",
+      "Running": true,
+      "Paused": false,
+      "Restarting": false,
+      "Pid": 2411,
+      "ExitCode": 0,
+      "StartedAt": "2026-11-20T09:15:03.5Z",
+      "FinishedAt": ""
+    },
+    "Image": "docker.io/library/nginx:alpine",
+    "LogPath": "/home/user.linux/.local/share/nerdctl/1935db59/containers/default/3f6c2a9d/3f6c2a9d-json.log",
+    "Name": "web",
+    "RestartCount": 0,
+    "Driver": "overlayfs",
+    "Platform": "linux",
+    "Mounts": [
+      {"Type": "bind", "Source": "/home/user.linux/site", "Destination": "/usr/share/nginx/html", "Mode": "", "RW": false, "Propagation": "rprivate"}
+    ],
+    "Config": {
+      "Hostname": "3f6c2a9d1e4b",
+      "AttachStdin": false,
+      "Labels": {"nerdctl/name": "web", "nerdctl/platform": "linux/arm64"},
+      "Env": ["PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin", "NGINX_VERSION=1.27.3"]
+    },
+    "NetworkSettings": {
+      "Ports": {"80/tcp": [{"HostIp": "0.0.0.0", "HostPort": "8080"}]},
+      "IPAddress": "10.4.0.12",
+      "MacAddress": "a2:11:3c:9e:00:12",
+      "Networks": {"unknown-eth0": {"IPAddress": "10.4.0.12", "IPPrefixLen": 24, "MacAddress": "a2:11:3c:9e:00:12"}}
+    },
+    "HostConfig": {"RestartPolicy": {"Name": "unless-stopped", "MaximumRetryCount": 0}}
+  },
+  {
+    "Id": "9a8b7c6d5e4f30211234567890abcdef1234567890abcdef1234567890abcdef",
+    "Created": "2026-11-19T18:00:00Z",
+    "Path": "sh",
+    "Args": ["-c", "exit 3"],
+    "State": {"Status": "exited", "Running": false, "Paused": false, "Restarting": false, "Pid": 0, "ExitCode": 3, "FinishedAt": "2026-11-19T18:00:01Z"},
+    "Image": "docker.io/library/alpine:3.20",
+    "Name": "job",
+    "RestartCount": 0,
+    "Mounts": [],
+    "Config": {"Hostname": "9a8b7c6d5e4f", "Labels": {"nerdctl/name": "job"}},
+    "NetworkSettings": {"Ports": {}, "Networks": {}}
+  }
+]

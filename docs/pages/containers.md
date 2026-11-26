@@ -22,3 +22,9 @@ Start, stop, restart (operator); rename (operator); delete (admin, confirm); log
 
 ## Implementation
 `ContainersPage` in `web/.../DockerPages.kt`. A stopped Colima profile shows an explicit Start Colima button. On a Docker error the last known list stays visible, greyed.
+
+nerdctl (v2): running Lima VMs whose guest has `nerdctl` appear in the profile switcher as `lima:<vm>`.
+The server runs `nerdctl` over the VM's `ssh.config` (`NerdctlProvider` behind `DockerProvider`) and parses
+`nerdctl inspect`, which is Docker-compatible JSON. Listing, inspect, start/stop/restart, rename, delete and
+logs work; images, pulls, pruning and live CPU/memory stay Docker-only, so the Images page lists only Colima
+profiles. If two Lima homes have a running VM with the same name, the first home wins.

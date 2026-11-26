@@ -63,6 +63,7 @@ import controllima.shared.VmDetail
 import controllima.shared.VmRef
 import controllima.shared.VmSource
 import controllima.shared.VmStatus
+import kotlinx.serialization.builtins.serializer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.channels.Channel
@@ -243,7 +244,7 @@ class Api(internal val s: Services, private val static: StaticFiles = StaticFile
 
     internal fun Ctx.profile(): String {
         val p = request.param("profile") ?: s.backends.defaultProfile()
-        if (!Names.isValidVmName(p)) badRequest("Invalid profile")
+        if (!Names.isValidContainerProfile(p)) badRequest("Invalid profile")
         return p
     }
 
@@ -385,6 +386,7 @@ class Api(internal val s: Services, private val static: StaticFiles = StaticFile
 
     private fun containerRoutes() {
         get(ApiRoutes.CONTAINERS) { json(s.containers.list(profile()), controllima.shared.ContainerList.serializer()) }
+        get(ApiRoutes.CONTAINER_PROFILES) { json(s.containers.profiles(), ListSerializer(String.serializer())) }
         get("${ApiRoutes.CONTAINERS}/{id}") {
             val detail = docker(profile()).inspect(containerId())
             // Values can hold credentials; viewers see keys only, admins reveal one value at a time (audited).

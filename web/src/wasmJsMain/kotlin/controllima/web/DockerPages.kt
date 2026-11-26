@@ -33,8 +33,7 @@ import controllima.shared.VmSource
 import controllima.shared.VmTable
 
 @Composable
-private fun ProfilePicker(m: AppModel, profile: String, onChange: (String) -> Unit) {
-    val profiles = m.profiles()
+private fun ProfilePicker(m: AppModel, profile: String, profiles: List<String> = m.profiles(), onChange: (String) -> Unit) {
     if (profiles.size > 1) Picker("Profile", profiles, profile, { it }, onChange)
 }
 
@@ -227,14 +226,14 @@ fun ContainerDetailPage(m: AppModel, profile: String, id: String) {
 
 @Composable
 fun ImagesPage(m: AppModel) {
-    var profile by remember { mutableStateOf(m.profiles().first()) }
+    var profile by remember { mutableStateOf(m.dockerProfiles().first()) }
     var dialog by remember { mutableStateOf<String?>(null) }
     var target by remember { mutableStateOf<Image?>(null) }
     var expanded by remember { mutableStateOf<String?>(null) }
     var prunePreview by remember { mutableStateOf<PruneResult?>(null) }
     val data = load(profile, everyMillis = 30_000) { m.api.images(profile) }
     PageHeader(Page.Images.title, data.value?.let { "${it.images.size} images · ${Format.bytes(it.totalBytes, m.units)} · reclaimable ${Format.bytes(it.reclaimableBytes, m.units)}" }) {
-        ProfilePicker(m, profile) { profile = it }
+        ProfilePicker(m, profile, m.dockerProfiles()) { profile = it }
         RoleButton(m, "Pull", Role.OPERATOR) { dialog = "pull" }
         RoleButton(m, "Prune…", Role.ADMIN) {
             m.launchCall(null, { m.api.pruneImages(profile, dryRun = true) }) { prunePreview = it; dialog = "prune" }

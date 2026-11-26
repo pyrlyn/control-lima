@@ -24,7 +24,8 @@ All endpoints are on `127.0.0.1:<port>`. JSON bodies use the models in `shared`.
 | DELETE | `/api/vms/{source}/{name}` | A | MVP | body `{"confirmName": "<name>"}`; 409 if protected |
 | POST | `/api/vms/{source}/{name}/rename` | A | v1 | body `{newName, confirmName}`; stopped VMs only |
 | POST | `/api/vms/{source}/{name}/clone` | A | v1 | where supported |
-| GET | `/api/containers?profile=` | V | MVP | containers of a Colima profile |
+| GET | `/api/containers?profile=` | V | MVP | containers of a Colima profile; v2: `lima:<vm>` lists nerdctl containers of a Lima VM |
+| GET | `/api/container-profiles` | V | v2 | Colima profiles, then `lima:<vm>` for running Lima VMs whose guest has nerdctl |
 | GET | `/api/containers/{id}` | V | MVP | inspect summary |
 | POST | `/api/containers/{id}/start` \| `/stop` \| `/restart` | O | MVP | |
 | POST | `/api/containers/{id}/rename` | O | MVP | `{newName}` |

@@ -25,6 +25,8 @@ object ApiRoutes {
     const val BACKUPS = "/api/backups"
     const val TEMPLATES = "/api/templates"
     const val DISK = "/api/disk"
+    /** Colima profiles plus `lima:<vm>` for running Lima VMs with nerdctl. Not under /api/containers: "profiles" is a valid container name. */
+    const val CONTAINER_PROFILES = "/api/container-profiles"
     const val CLEANUP = "/api/disk/cleanup"
     const val SETTINGS = "/api/settings"
     const val TOKENS = "/api/tokens"
@@ -111,6 +113,11 @@ object Names {
     fun isValidVmName(name: String): Boolean = name.length <= 64 && limaName.matches(name)
     fun isValidContainerName(name: String): Boolean = name.length <= 128 && containerName.matches(name)
     fun isValidContainerRef(ref: String): Boolean = containerId.matches(ref) || isValidContainerName(ref)
+
+    /** Container profiles of Lima VMs (nerdctl) are `lima:<vm>`; plain names are Colima profiles. */
+    const val NERDCTL_PREFIX = "lima:"
+    fun isValidContainerProfile(profile: String): Boolean =
+        isValidVmName(profile) || (profile.startsWith(NERDCTL_PREFIX) && isValidVmName(profile.removePrefix(NERDCTL_PREFIX)))
     fun isValidImageRef(ref: String): Boolean = imageRef.matches(ref)
     /** Snapshot tags follow the VM name rule, so they are safe as a single command-line argument. */
     fun isValidSnapshotTag(tag: String): Boolean = isValidVmName(tag)

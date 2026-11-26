@@ -3,6 +3,7 @@ package controllima.server
 import controllima.providers.docker.DockerProvider
 import controllima.shared.Container
 import controllima.shared.ContainerList
+import controllima.shared.Names
 import controllima.shared.EventType
 import controllima.shared.ServerEvent
 import controllima.shared.Settings
@@ -234,19 +235,29 @@ class ContainerInventory(
     private val backends: Backends,
     private val events: EventBus,
     private val clock: () -> Long = System::currentTimeMillis,
+    private val nerdctl: NerdctlProfiles? = null,
 ) {
     private val cache = ConcurrentHashMap<String, Pair<Long, ContainerList>>()
     private val listeners = mutableListOf<(Container?, Container?) -> Unit>()
 
     fun onChange(listener: (old: Container?, new: Container?) -> Unit) = synchronized(listeners) { listeners += listener }
 
-    fun docker(profile: String): DockerProvider? = backends.docker(profile)
+    fun docker(profile: String): DockerProvider? =
+        if (profile.startsWith(Names.NERDCTL_PREFIX)) nerdctl?.docker(profile) else backends.docker(profile)
+
+    /** Colima profiles, then Lima VMs whose guest has nerdctl. */
+    suspend fun profiles(): List<String> = backends.colimaProfiles() + nerdctl?.profiles().orEmpty()
 
     suspend fun list(profile: String, maxAgeMillis: Long = 2_000): ContainerList {
         cache[profile]?.let { (at, value) -> if (clock() - at <= maxAgeMillis) return value }
-        val docker = backends.docker(profile)
+        val docker = docker(profile)
         val result = if (docker == null) {
-            ContainerList(profile, emptyList(), "Docker socket not found at ${backends.dockerSocket(profile)} (is the Colima profile running?)", unavailable = true)
+            val reason = if (profile.startsWith(Names.NERDCTL_PREFIX)) {
+                "nerdctl is not available in Lima VM ${profile.removePrefix(Names.NERDCTL_PREFIX)} (is it running?)"
+            } else {
+                "Docker socket not found at ${backends.dockerSocket(profile)} (is the Colima profile running?)"
+            }
+            ContainerList(profile, emptyList(), reason, unavailable = true)
         } else {
             withContext(Dispatchers.IO) {
                 runCatching { ContainerList(profile, docker.containers()) }
@@ -259,7 +270,7 @@ class ContainerInventory(
     }
 
     /** All profiles with an available socket. */
-    suspend fun all(maxAgeMillis: Long = 2_000): List<ContainerList> = backends.colimaProfiles().map { list(it, maxAgeMillis) }
+    suspend fun all(maxAgeMillis: Long = 2_000): List<ContainerList> = profiles().map { list(it, maxAgeMillis) }
 
     fun cached(): List<Container> = cache.values.flatMap { it.second.containers }
 

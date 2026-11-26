@@ -24,6 +24,10 @@ class ApiTest {
             "list --json" to ScriptedRunner.ok(javaClass.getResource("/limactl-list.ndjson")!!.readText()),
             "rename tc-dev-1" to ScriptedRunner.fail("rename is not supported"),
             "limactl info" to ScriptedRunner.ok("""{"version":"2.0.0","templates":[]}"""),
+            "command -v nerdctl" to ScriptedRunner.ok("yes\n"),
+            "nerdctl ps" to ScriptedRunner.ok(
+                """[{"Id":"3f6c2a9d1e4b","Name":"web","Image":"docker.io/library/nginx:alpine","State":{"Status":"running"},"Config":{},"NetworkSettings":{}}]""",
+            ),
         ),
     )
     private val server = ControlLimaServer(
@@ -89,6 +93,22 @@ class ApiTest {
     @Test
     fun `query token is not accepted outside websockets`() {
         assertEquals(401, call("GET", "${ApiRoutes.VMS}?token=$token", auth = null).status)
+    }
+
+    @Test
+    fun `running lima vms with nerdctl become container profiles`() {
+        call("GET", ApiRoutes.VMS)
+        val profiles = call("GET", ApiRoutes.CONTAINER_PROFILES)
+        assertEquals(200, profiles.status)
+        assertTrue("\"lima:infra-test\"" in profiles.body, profiles.body)
+        assertTrue("lima:tc-dev-1" !in profiles.body, "stopped VMs are not asked")
+        val list = call("GET", ApiRoutes.CONTAINERS + "?profile=lima:infra-test")
+        assertEquals(200, list.status)
+        val web = ApiJson.decodeFromString(controllima.shared.ContainerList.serializer(), list.body).containers.single()
+        assertEquals("container:lima:infra-test/3f6c2a9d1e4b", web.targetId)
+        assertEquals("docker.io/library/nginx:alpine", web.image)
+        assertTrue(runner.calls.any { "lima-infra-test" in it && it.last().startsWith("ids=") })
+        assertEquals(400, call("GET", ApiRoutes.CONTAINERS + "?profile=lima:-x").status)
     }
 
     @Test

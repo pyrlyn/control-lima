@@ -65,7 +65,7 @@ class ControlLimaServer(
         val events = EventBus()
         val actions = ActionManager(scope, events, audit)
         val inventory = Inventory(backends, { settings.current }, events)
-        val containers = ContainerInventory(backends, events)
+        val containers = ContainerInventory(backends, events, nerdctl = NerdctlProfiles(backends, { inventory.snapshot.value.vms }))
         val stats = StatsCollector(backends, inventory, containers, { settings.current })
         val ports = PortsService(backends, inventory, containers)
         val retention = { settings.current.let { Retention(it.retentionRawHours, it.retention1mDays, it.retention15mDays, it.retention1hDays) } }

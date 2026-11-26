@@ -52,7 +52,7 @@ fun OverviewPage(m: AppModel) {
     WatchStats(m, running.map { it.ref.targetId })
     val profiles = m.profiles()
     val containers = load(profiles, everyMillis = 15_000) { profiles.map { m.refreshContainers(it) } }
-    val images = load(profiles.firstOrNull()) { m.api.images(profiles.firstOrNull()) }
+    val images = load(m.dockerProfiles().first()) { m.api.images(m.dockerProfiles().first()) }
     val disk = load(Unit, everyMillis = 60_000) { m.api.disk() }
 
     PageHeader(Page.Overview.title, m.vmsAt.takeIf { it > 0 }?.let { "Updated ${Format.clock(it)}" })

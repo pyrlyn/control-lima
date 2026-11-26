@@ -61,6 +61,7 @@ class ApiClient(private val transport: HttpTransport, var token: String) {
 
     // Containers
     suspend fun containers(profile: String? = null): ContainerList = get(ApiRoutes.CONTAINERS + profileQuery(profile))
+    suspend fun containerProfiles(): List<String> = get(ApiRoutes.CONTAINER_PROFILES)
     suspend fun container(id: String, profile: String): ContainerDetail = get(ApiRoutes.container(id, profile))
     suspend fun containerAction(id: String, profile: String, action: String) =
         sendUnit("POST", ApiRoutes.containerAction(id, profile, action), null)
